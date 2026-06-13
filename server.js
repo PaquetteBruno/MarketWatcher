@@ -1,15 +1,16 @@
 const express = require('express');
-const mysql = require('mysql2/promise'); // Promises allow us to use modern async/await syntax
+const mysql = require('mysql2/promise');
 const cors = require('cors');
-const axios = require('axios');
+const YahooFinance = require('yahoo-finance2').default; 
+const yahooFinance = new YahooFinance(); 
 
-require('dotenv').config(); // This loads our hidden .env credentials into process.env
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // Allows the backend to read JSON data sent from the front-end
+app.use(express.json());
 
-// 1. Establish a MySQL Connection Pool using your environment variables
+// 1. Centralized MySQL Connection Pool (Uses your clean .env credentials)
 const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -23,69 +24,124 @@ const db = mysql.createPool({
 // 2. Separate Endpoint: NASDAQ Tab Data Query
 app.get('/api/markets/nasdaq', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT symbol, name, price, price_change AS `change` FROM stocks WHERE market = "NASDAQ"');
-        res.json({ market: 'NASDAQ', data: rows });
+        // Yahoo Finance tracks Apple and Microsoft via their clean standard symbols
+        const [aaplData, msftData] = await Promise.all([
+            yahooFinance.quote('AAPL'),
+            yahooFinance.quote('MSFT')
+        ]);
+
+        const liveStocks = [
+            {
+                symbol: 'AAPL',
+                name: aaplData.longName || 'Apple Inc.',
+                market: 'NASDAQ',
+                price: aaplData.regularMarketPrice,
+                change: `${aaplData.regularMarketChangePercent >= 0 ? '+' : ''}${aaplData.regularMarketChangePercent.toFixed(2)}%`
+            },
+            {
+                symbol: 'MSFT',
+                name: msftData.longName || 'Microsoft Corp.',
+                market: 'NASDAQ',
+                price: msftData.regularMarketPrice,
+                change: `${msftData.regularMarketChangePercent >= 0 ? '+' : ''}${msftData.regularMarketChangePercent.toFixed(2)}%`
+            }
+        ];
+
+        // Sync fresh values straight into your local stocks table cache
+        for (const stock of liveStocks) {
+            await db.query(
+                `INSERT INTO stocks (symbol, name, market, price, price_change) 
+                 VALUES (?, ?, ?, ?, ?) 
+                 ON DUPLICATE KEY UPDATE price = VALUES(price), price_change = VALUES(price_change)`,
+                [stock.symbol, stock.name, stock.market, stock.price, stock.change]
+            );
+        }
+
+        res.json({ market: 'NASDAQ', data: liveStocks });
+
     } catch (error) {
-        res.status(500).json({ error: "Database query failed", details: error.message });
+        console.warn("Notice: NASDAQ pipeline fallback initiated:", error.message);
+        try {
+            const [rows] = await db.query('SELECT symbol, name, price, price_change AS `change` FROM stocks WHERE market = "NASDAQ"');
+            res.json({ market: 'NASDAQ (Cached)', data: rows, rawDebug: `Yahoo Error: ${error.message}` });
+        } catch (dbError) {
+            res.status(500).json({ error: "Database query failed completely", details: dbError.message });
+        }
     }
 });
 
 // 3. Separate Endpoint: NYSE Tab Data Query
 app.get('/api/markets/nyse', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT symbol, name, price, price_change AS `change` FROM stocks WHERE market = "NYSE"');
-        res.json({ market: 'NYSE', data: rows });
-    } catch (error) {
-        res.status(500).json({ error: "Database query failed", details: error.message });
-    }
-});
+        const [jpmData, bacData] = await Promise.all([
+            yahooFinance.quote('JPM'),
+            yahooFinance.quote('BAC')
+        ]);
 
-// 4. Separate Endpoint: Crypto Tab Data Query
-app.get('/api/markets/crypto', async (req, res) => {
-    try {
-        const apiKey = process.env.COINGECKO_API_KEY;
-
-        if (!apiKey) {
-            throw new Error("COINGECKO_API_KEY variable is missing or blank inside your .env file");
-        }
-
-        // 1. Fetch live market values using Axios (Axios uses standard IPv4 routing by default)
-        const apiResponse = await axios.get(
-            `https://api.coingecko.com/api/v3/simple/price`,
+        const liveStocks = [
             {
-                params: {
-                    ids: 'bitcoin,ethereum',
-                    vs_currencies: 'usd',
-                    include_24hr_change: 'true',
-                    x_cg_demo_api_key: apiKey // Passes key cleanly as a URL parameter
-                },
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                }
-            }
-        );
-
-        // Axios automatically parses JSON data into an object named .data
-        const rawData = apiResponse.data;
-
-        // 2. Data Normalization: Reshape the nested payload to match your database columns
-        const liveCryptoAssets = [
-            {
-                symbol: 'BTC',
-                name: 'Bitcoin',
-                price: rawData.bitcoin.usd,
-                change: `${rawData.bitcoin.usd_24h_change >= 0 ? '+' : ''}${rawData.bitcoin.usd_24h_change.toFixed(2)}%`
+                symbol: 'JPM',
+                name: jpmData.longName || 'JPMorgan Chase & Co.',
+                market: 'NYSE',
+                price: jpmData.regularMarketPrice,
+                change: `${jpmData.regularMarketChangePercent >= 0 ? '+' : ''}${jpmData.regularMarketChangePercent.toFixed(2)}%`
             },
             {
-                symbol: 'ETH',
-                name: 'Ethereum',
-                price: rawData.ethereum.usd,
-                change: `${rawData.ethereum.usd_24h_change >= 0 ? '+' : ''}${rawData.ethereum.usd_24h_change.toFixed(2)}%`
+                symbol: 'BAC',
+                name: bacData.longName || 'Bank of America Corp.',
+                market: 'NYSE',
+                price: bacData.regularMarketPrice,
+                change: `${bacData.regularMarketChangePercent >= 0 ? '+' : ''}${bacData.regularMarketChangePercent.toFixed(2)}%`
             }
         ];
 
-        // 3. Keep Local Records Synced: Update your SQL database tables asynchronously
-        for (const asset of liveCryptoAssets) {
+        for (const stock of liveStocks) {
+            await db.query(
+                `INSERT INTO stocks (symbol, name, market, price, price_change) 
+                 VALUES (?, ?, ?, ?, ?) 
+                 ON DUPLICATE KEY UPDATE price = VALUES(price), price_change = VALUES(price_change)`,
+                [stock.symbol, stock.name, stock.market, stock.price, stock.change]
+            );
+        }
+
+        res.json({ market: 'NYSE', data: liveStocks });
+
+    } catch (error) {
+        console.warn("Notice: NYSE pipeline fallback initiated:", error.message);
+        try {
+            const [rows] = await db.query('SELECT symbol, name, price, price_change AS `change` FROM stocks WHERE market = "NYSE"');
+            res.json({ market: 'NYSE (Cached)', data: rows, rawDebug: `Yahoo Error: ${error.message}` });
+        } catch (dbError) {
+            res.status(500).json({ error: "Database query failed completely", details: dbError.message });
+        }
+    }
+});
+
+// 4. Separate Endpoint: Crypto Tab Data Query (Consolidated here)
+app.get('/api/markets/crypto', async (req, res) => {
+    try {
+        // Yahoo Finance tracks main cryptocurrencies as ticker pairs (BTC-USD, ETH-USD)
+        const [btcData, ethData] = await Promise.all([
+            yahooFinance.quote('BTC-USD'),
+            yahooFinance.quote('ETH-USD')
+        ]);
+
+        const liveCrypto = [
+            {
+                symbol: 'BTC',
+                name: btcData.shortName || 'Bitcoin USD',
+                price: btcData.regularMarketPrice,
+                change: `${btcData.regularMarketChangePercent >= 0 ? '+' : ''}${btcData.regularMarketChangePercent.toFixed(2)}%`
+            },
+            {
+                symbol: 'ETH',
+                name: ethData.shortName || 'Ethereum USD',
+                price: ethData.regularMarketPrice,
+                change: `${ethData.regularMarketChangePercent >= 0 ? '+' : ''}${ethData.regularMarketChangePercent.toFixed(2)}%`
+            }
+        ];
+
+        for (const asset of liveCrypto) {
             await db.query(
                 `INSERT INTO crypto (symbol, name, price, price_change) 
                  VALUES (?, ?, ?, ?) 
@@ -94,21 +150,21 @@ app.get('/api/markets/crypto', async (req, res) => {
             );
         }
 
-        // 4. Send the cleaned, standardized structure straight to your active React tab
-        res.json({ market: 'Crypto', data: liveCryptoAssets });
+        res.json({ market: 'Crypto', data: liveCrypto });
 
     } catch (error) {
-        // Axios errors have a helpful .response or .message attached to them
-        console.error("Live fetch engine malfunction:", error.message);
-        res.status(500).json({ error: "Failed to pull live crypto data", details: error.message });
+        console.warn("Notice: Crypto pipeline fallback initiated:", error.message);
+        try {
+            const [rows] = await db.query('SELECT symbol, name, price, price_change AS `change` FROM crypto');
+            res.json({ market: 'Crypto (Cached)', data: rows, rawDebug: `Yahoo Error: ${error.message}` });
+        } catch (dbError) {
+            res.status(500).json({ error: "Database query failed completely", details: dbError.message });
+        }
     }
 });
 
-
-
-
-// Start the Backend Node.js Server
+// Launch server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Server is officially listening and pulling from MySQL on port ${PORT}`);
+    console.log(`Unified Full-Stack Yahoo Finance Engine running smoothly on port ${PORT}`);
 });
