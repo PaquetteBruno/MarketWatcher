@@ -262,16 +262,30 @@ function App() {
             {authError && <p style={{ color: '#f85149', margin: 0, fontSize: '13px', fontWeight: '600' }}>⚠️ {authError}</p>}
 
             <button type="submit" style={{ padding: '12px', background: '#238636', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', marginTop: '10px' }}>
-              {isRegistering ? 'Compile & Register Account' : 'Authenticate Security Session'}
+              {isRegistering ? 'Create New Account' : 'Sign In'}
             </button>
           </form>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', borderTop: '1px solid #21262d', paddingTop: '20px', alignItems: 'center' }}>
-            <div id="googleBtnAnchor" style={{ width: '100%', minHeight: '40px' }}></div>
-            <button onClick={() => alert('Facebook Identity OAuth coming next!')} style={{ padding: '10px', background: '#1877f2', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', maxWidth: '340px' }}>
-              📘 Continue with Facebook
-            </button>
-          </div>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '12px', 
+            marginTop: '20px', 
+            borderTop: '1px solid #21262d', 
+            paddingTop: '20px', 
+            alignItems: 'center', // Centers child flex items horizontally
+            width: '100%' 
+          }}>
+          <div id="googleBtnAnchor" style={{ 
+              width: '340px', // Matches the exact width we told Google to render!
+              display: 'flex', 
+              justifyContent: 'center', // Guarantees the injected iframe is centered
+              minHeight: '40px' 
+            }}></div>
+          <button onClick={() => alert('Facebook Identity OAuth coming next!')} style={{ padding: '10px', background: '#1877f2', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', maxWidth: '340px' }}>
+            📘 Continue with Facebook
+          </button>
+        </div>
 
           <footer style={{ marginTop: '25px', textAlign: 'center', fontSize: '13px', color: '#8b949e' }}>
             {isRegistering ? 'Already have a terminal gateway card?' : 'New to this global tracking station?'} {' '}
