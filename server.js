@@ -78,7 +78,7 @@ app.get('/api/markets/nasdaq', authenticateToken, async (req, res) => {
                         name: data.longName || data.shortName || stock.symbol,
                         exchange: 'NASDAQGS',
                         price: data.regularMarketPrice,
-                        price_change: `${data.regularMarketChangePercent >= 0 ? '+' : ''}${data.regularMarketChangePercent.toFixed(2)}%`
+                        price_change: `${data.regularMarketChangePercent >= 0 ? '+' : '-'}${data.regularMarketChangePercent.toFixed(2)}%`
                     };
 
                     // Sync to your base tables cache
@@ -126,7 +126,7 @@ app.get('/api/markets/nyse', authenticateToken, async (req, res) => {
                         name: data.longName || data.shortName || stock.symbol,
                         exchange: 'NYSE',
                         price: data.regularMarketPrice,
-                        price_change: `${data.regularMarketChangePercent >= 0 ? '+' : ''}${data.regularMarketChangePercent.toFixed(2)}%`
+                        price_change: `${data.regularMarketChangePercent >= 0 ? '+' : '-'}${data.regularMarketChangePercent.toFixed(2)}%`
                     };
 
                     await db.query(
@@ -171,7 +171,7 @@ app.get('/api/markets/crypto', authenticateToken, async (req, res) => {
                         symbol: crypto.symbol,
                         name: data.shortName || crypto.symbol,
                         price: data.regularMarketPrice,
-                        change: `${data.regularMarketChangePercent >= 0 ? '+' : ''}${data.regularMarketChangePercent.toFixed(2)}%`
+                        change: `${data.regularMarketChangePercent >= 0 ? '+' : '-'}${data.regularMarketChangePercent.toFixed(2)}%`
                     };
 
                     await db.query(
@@ -197,46 +197,24 @@ app.get('/api/markets/crypto', authenticateToken, async (req, res) => {
 // 5. Separate Endpoint: Macro Tracking (Indices, Commodities, Forex)
 app.get('/api/markets/macro', async (req, res) => {
     try {
-        // Yahoo Finance symbol standards:
-        // ^GSPC = S&P 500 Index, GC=F = Gold Futures, USDCAD=X = USD/CAD Forex
-        const [sp500, gold, usdcad] = await Promise.all([
-            yahooFinance.quote('^GSPC'),
-            yahooFinance.quote('GC=F'),
-            yahooFinance.quote('USDCAD=X')
-        ]);
 
-        const liveMacros = [
-            {
-                symbol: 'S&P 500',
-                name: sp500.shortName || 'S&P 500 Index',
-                price: sp500.regularMarketPrice,
-                change: `${sp500.regularMarketChangePercent >= 0 ? '+' : ''}${sp500.regularMarketChangePercent.toFixed(2)}%`
-            },
-            {
-                symbol: 'GOLD',
-                name: gold.shortName || 'Gold Futures',
-                price: gold.regularMarketPrice,
-                change: `${gold.regularMarketChangePercent >= 0 ? '+' : ''}${gold.regularMarketChangePercent.toFixed(2)}%`
-            },
-            {
-                symbol: 'USD/CAD',
-                name: usdcad.shortName || 'USD to CAD Rate',
-                price: usdcad.regularMarketPrice,
-                change: `${usdcad.regularMarketChangePercent >= 0 ? '+' : ''}${usdcad.regularMarketChangePercent.toFixed(2)}%`
-            }
-        ];
+        const [macros] = await db.query("SELECT id, symbol, name, category, price, price_change FROM macro_assets");
 
-        // Cache fresh variables securely into your local MySQL table structure
-        for (const macro of liveMacros) {
+        for (const macro of macros) {
+            const liveMacro = await yahooFinance.quote(macro.symbol);
+
+            macro.price = liveMacro.regularMarketPrice;
+            macro.price_change = `${liveMacro.regularMarketChangePercent >= 0 ? '+' : '-'}${liveMacro.regularMarketChangePercent.toFixed(2)}%`
+            macro.name = liveMacro.shortName;
+            macro.category = liveMacro.quoteType;
+
             await db.query(
-                `INSERT INTO macro_assets (symbol, name, category, price, price_change) 
-                 VALUES (?, ?, 'MACRO', ?, ?) 
-                 ON DUPLICATE KEY UPDATE price = VALUES(price), price_change = VALUES(price_change)`,
-                [macro.symbol, macro.name, macro.price, macro.change]
+                "update macro_assets set name = ?, price = ?, price_change = ?, category = ? where id = ?",
+                [macro.name, macro.price, macro.price_change, macro.category, macro.id]
             );
         }
 
-        res.json({ market: 'Macro Options', data: liveMacros });
+        res.json({ market: 'Macro Options', data: macros });
 
     } catch (error) {
         console.warn("Notice: Macro pipeline fallback initiated:", error.message);

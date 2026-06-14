@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
 function App() {
-  // 1. Session & Auth States
+// 1. Session & Auth States
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -15,6 +15,7 @@ function App() {
   // 2. Main Terminal States
   const [activeTab, setActiveTab] = useState('portfolio');
   const [marketData, setMarketData] = useState([]);
+  const [macroData, setMacroData] = useState([]); // 📈 NEW: Holds your S&P 500, Gold, and Forex values
   const [debugLog, setDebugLog] = useState('Waiting for session initialization...');
   const [showConsole, setShowConsole] = useState(false);
 
@@ -22,8 +23,7 @@ function App() {
   const [searchResult, setSearchResult] = useState(null);
   const [searchMessage, setSearchMessage] = useState('');
 
-  // 3. Central Startup Loop: Restores local sessions AND initializes Google Identity Buttons
-    // 3. Central Startup Loop: Restores local sessions AND attaches a safe listener for the Google script load
+  // 3. Central Startup Loop: Restores local sessions AND attaches a safe listener for the Google script load
   useEffect(() => {
     const savedToken = localStorage.getItem('mw_token');
     const savedUser = localStorage.getItem('mw_user');
@@ -83,30 +83,33 @@ function App() {
   }, [token]);
 
 
-  // Combined Market Data Fetch Routine
+ // Combined Market Data & Ticker Banner Fetch Routine
   const fetchMarketData = async () => {
     if (!user || !token) return;
     try {
-      setDebugLog(`Querying backend endpoints for User Account ID: ${user.id}...`);
+      setDebugLog(`Querying backend endpoints...`);
+      
+      // 1. Fetch main active tab data
       const endpoint = activeTab === 'portfolio' 
         ? `http://localhost:5000/api/watchlist/user/${user.id}` 
         : `http://localhost:5000/api/markets/${activeTab}`;
 
       const response = await fetch(endpoint, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      if (!response.ok) {
-        const rawText = await response.text();
-        setDebugLog(`Backend error status code: ${response.status}\n\n${rawText}`);
-        return;
-      }
       const json = await response.json();
       setMarketData(json.data || []);
-      setDebugLog(`Success! Standardized data synchronized with ${json.data ? json.data.length : 0} elements.`);
+
+      // 2. 📈 AUTOMATED BANNER SYNC: Silently grab macro metrics for your top ticker row
+      const macroResponse = await fetch('http://localhost:5000/api/markets/macro', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      const macroJson = await macroResponse.json();
+      setMacroData(macroJson.data || []);
+
+      setDebugLog(`Success! Terminal interfaces successfully updated.`);
     } catch (error) {
       setDebugLog(`Network Fetch Failure: ${error.message}`);
     }
@@ -227,6 +230,7 @@ function App() {
   };
 
   const cellStyle = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+
   // ==========================================
   // 🔐 SECURE WALL: LOGIN / SIGNUP SCREEN INTERFACE
   // ==========================================
@@ -282,13 +286,13 @@ function App() {
               justifyContent: 'center', // Guarantees the injected iframe is centered
               minHeight: '40px' 
             }}></div>
-          <button onClick={() => alert('Facebook Identity OAuth coming next!')} style={{ padding: '10px', background: '#1877f2', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', maxWidth: '340px' }}>
+          {/* <button onClick={() => alert('Facebook Identity OAuth coming next!')} style={{ padding: '10px', background: '#1877f2', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', maxWidth: '340px' }}>
             📘 Continue with Facebook
-          </button>
+          </button> */}
         </div>
 
           <footer style={{ marginTop: '25px', textAlign: 'center', fontSize: '13px', color: '#8b949e' }}>
-            {isRegistering ? 'Already have a terminal gateway card?' : 'New to this global tracking station?'} {' '}
+            {isRegistering ? 'Already have a terminal gateway card?' : 'New user?'} {' '}
             <button onClick={() => { setIsRegistering(!isRegistering); setAuthError(''); }} style={{ background: 'transparent', border: 'none', color: '#58a6ff', cursor: 'pointer', padding: 0, textDecoration: 'underline', fontStyle: 'italic' }}>
               {isRegistering ? 'Sign In Here' : 'Create Account Here'}
             </button>
@@ -297,11 +301,52 @@ function App() {
       </div>
     );
   }
+
   // ==========================================
   // 💻 MAIN LIVE TRADING TERMINAL USER INTERFACE
   // ==========================================
   return (
-    <div style={{ backgroundColor: '#0d1117', color: '#c9d1d9', fontFamily: 'sans-serif', minHeight: '100vh', padding: '40px 20px', boxSizing: 'border-box' }}>
+    <div style={{ 
+      backgroundColor: '#0d1117', 
+      color: '#c9d1d9', 
+      fontFamily: 'sans-serif', 
+      minHeight: '100vh', 
+      padding: '40px 20px', 
+      boxSizing: 'border-box'
+      }}>
+      
+      {/* 📈 NEW: LIVE TOP GLOBAL TICKER BANNER MARQUEE RIBBON */}
+      {macroData.length > 0 && (
+        <div style={{ 
+          background: '#161b22', 
+          borderBottom: '1px solid #21262d', 
+          margin: '0 -20px 30px -20px', 
+          padding: '12px 20px', 
+          display: 'flex', 
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '40px', 
+          fontSize: '13px',
+          fontWeight: '600'
+        }}>
+          {macroData.map((macro) => {
+            const isPositive = macro.price_change && macro.price_change.startsWith('+');
+            return (
+              <div key={macro.symbol} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#8b949e' }}>{macro.name}:</span>
+                <span style={{ color: '#ffffff', fontFamily: 'monospace' }}>
+                  ${parseFloat(macro.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+                <span style={{ color: isPositive ? '#3fb950' : '#f85149', fontFamily: 'monospace' }}>
+                  {macro.price_change}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         
         {/* Header containing Profile and Sign Out Trigger */}
@@ -354,16 +399,16 @@ function App() {
           )}
         </div>
 
-        {/* Tab Menu Navigation */}
+        {/* Tab Menu Navigation (Macro option removed cleanly!) */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '30px', background: '#161b22', padding: '8px', borderRadius: '8px', border: '1px solid #21262d' }}>
-          {['portfolio', 'nasdaq', 'nyse', 'crypto', 'macro'].map((tab) => (
+          {['portfolio', 'nasdaq', 'nyse', 'crypto'].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '12px', background: activeTab === tab ? '#21262d' : 'transparent', color: activeTab === tab ? '#58a6ff' : '#8b949e', border: 'none', borderRadius: '6px', cursor: 'pointer', textTransform: 'uppercase', fontSize: '12px', fontWeight: activeTab === tab ? '600' : '500' }}>
-              {tab === 'portfolio' ? '⭐ My Watchlist' : tab === 'crypto' ? 'Crypto' : tab === 'macro' ? 'Macro / Forex' : tab}
+              {tab === 'portfolio' ? '⭐ My Watchlist' : tab === 'crypto' ? 'Crypto' : tab}
             </button>
           ))}
         </div>
 
-                {/* Immovable Column Grid Data Sheet */}
+        {/* Immovable Column Grid Data Sheet */}
         <div style={{ background: '#161b22', border: '1px solid #21262d', borderRadius: '10px', padding: '10px 20px', marginBottom: '40px', overflowX: 'auto' }}>
           {marketData.length > 0 ? (
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
