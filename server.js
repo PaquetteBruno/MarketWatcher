@@ -3,6 +3,10 @@ const mysql = require('mysql2/promise');
 const cors = require('cors');
 const YahooFinance = require('yahoo-finance2').default; 
 const yahooFinance = new YahooFinance(); 
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 require('dotenv').config();
 
@@ -21,13 +25,35 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
-app.get('/api/markets/nasdaq', async (req, res) => {
-    try {
-        const userId = 1; // Simulating your logged-in user account profile
+// ==========================================
+// 🛡️ JWT IDENTITY VERIFICATION MIDDLEWARE
+// ==========================================
+const authenticateToken = (req, res, next) => {
+    // Extract the token passport out of the incoming request headers
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Splits "Bearer <TOKEN>"
 
-        // 1. Query MySQL to find ONLY NASDAQ stock symbols this user has pinned
+    if (!token) {
+        return res.status(401).json({ error: "Access Denied. Missing session token passport." });
+    }
+
+    try {
+        // Decrypt the token using your secure key secret
+        const verified = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = verified; // Binds the decrypted { id, username } right onto the request object!
+        next(); // Safely pass execution forward to your database route
+    } catch (error) {
+        res.status(403).json({ error: "Invalid or expired session token passport." });
+    }
+};
+
+
+app.get('/api/markets/nasdaq', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id; // 💥 NO MORE HARDCODING! Reads your live logged-in ID automatically!
+
         const [savedStocks] = await db.query(
-            "SELECT symbol, id FROM watchlists WHERE user_id = ? AND exchange = 'NASDAQGS'",
+            "SELECT symbol FROM watchlists WHERE user_id = ? AND exchange = 'NASDAQGS'",
             [userId]
         );
 
@@ -76,12 +102,12 @@ app.get('/api/markets/nasdaq', async (req, res) => {
     }
 });
 
-app.get('/api/markets/nyse', async (req, res) => {
+app.get('/api/markets/nyse', authenticateToken, async (req, res) => {
     try {
-        const userId = 1;
+        const userId = req.user.id; // Dynamic session hook
 
         const [savedStocks] = await db.query(
-            "SELECT symbol, id FROM watchlists WHERE user_id = ? AND exchange = 'NYSE'",
+            "SELECT symbol FROM watchlists WHERE user_id = ? AND exchange = 'NYSE'",
             [userId]
         );
 
@@ -122,12 +148,12 @@ app.get('/api/markets/nyse', async (req, res) => {
     }
 });
 
-app.get('/api/markets/crypto', async (req, res) => {
+app.get('/api/markets/crypto', authenticateToken, async (req, res) => {
     try {
-        const userId = 1;
+        const userId = req.user.id; // Dynamic session hook
 
         const [savedCrypto] = await db.query(
-            "SELECT symbol, id FROM watchlists WHERE user_id = ? AND exchange = 'CRYPTO'",
+            "SELECT symbol FROM watchlists WHERE user_id = ? AND exchange = 'CRYPTO'",
             [userId]
         );
 
@@ -324,6 +350,160 @@ app.get('/api/watchlist/user/:id', async (req, res) => {
     }
 });
 
+// ==========================================
+// 🔐 AUTHENTICATION ROUTING ENGINES
+// ==========================================
+
+// 10. Local Register Endpoint: Creates a new user with a hashed password
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { username, email, password } = req.body;
+
+        if (!username || !email || !password) {
+            return res.status(400).json({ error: "Missing required signup fields" });
+        }
+
+        // Cryptographically hash the password before it ever touches your database logs
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        // Save into your newly updated user database table
+        await db.query(
+            `INSERT INTO users (username, email, password_hash, auth_provider) VALUES (?, ?, ?, 'local')`,
+            [username, email, passwordHash]
+        );
+
+        res.status(201).json({ message: "User account generated successfully! Proceed to login." });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: "Username or email is already registered." });
+        }
+        res.status(500).json({ error: "Registration failed", details: error.message });
+    }
+});
+
+// 11. Local Login Endpoint: Verifies credentials and hands back a secure JWT token passport
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: "Missing required login credentials" });
+        }
+
+        // Query the DB to check if the user profile exists
+        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (users.length === 0) {
+            return res.status(401).json({ error: "Invalid email or password credentials." });
+        }
+
+        const user = users[0];
+
+        // Security Check: If they log in via local form but registered via social OAuth, redirect them
+        if (user.auth_provider !== 'local') {
+            return res.status(400).json({ error: `This account uses ${user.auth_provider} authentication. Sign in with social instead.` });
+        }
+
+        // Compare the submitted password string with the database hash key securely
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({ error: "Invalid email or password credentials." });
+        }
+
+        // Generate the secure JWT token passport stamp
+        const token = jwt.sign(
+            { id: user.id, username: user.username },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' } // Automatically log them out out after 1 day for security
+        );
+
+        // Hand back the token and user metadata cleanly to your React frontend app
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                avatar_url: user.avatar_url
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: "Login pipeline crashed", details: error.message });
+    }
+});
+
+// 12. Google OAuth Authentication Endpoint: Verifies OIDC tokens and registers/logs in social profiles
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        if (!idToken) {
+            return res.status(400).json({ error: "Missing required Google ID Token credential payload." });
+        }
+
+        // 1. Validate the token signature directly against Google's security servers
+        const ticket = await googleClient.verifyIdToken({
+            idToken: idToken,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        const { email, name, picture } = payload; // Extract Google user profile metadata safely!
+
+        // 2. Query MySQL to see if this specific social account profile already exists
+        const [existingUsers] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        
+        let user;
+
+        if (existingUsers.length === 0) {
+            // 3. AUTO-REGISTER: If they are brand new, create their relational account line automatically!
+            // We use a clean text replacement format to turn their full name into a safe, lowercase username
+            const generatedUsername = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.floor(1000 + Math.random() * 9000);
+            
+            const [insertResult] = await db.query(
+                `INSERT INTO users (username, email, auth_provider, avatar_url) VALUES (?, ?, 'google', ?)`,
+                [generatedUsername, email, picture]
+            );
+
+            user = {
+                id: insertResult.insertId,
+                username: generatedUsername,
+                email: email,
+                avatar_url: picture
+            };
+            console.log(`Successfully generated new Google account profile: ${generatedUsername}`);
+        } else {
+            user = existingUsers[0];
+            
+            // Security check: If they registered locally but tried to use Google social sign-in, manage the overlap safely
+            if (user.auth_provider !== 'google') {
+                return res.status(400).json({ error: `This email is already linked via ${user.auth_provider} credentials. Please sign in manually.` });
+            }
+        }
+
+        // 4. Issue your custom application JWT token passport tracking stamp
+        const token = jwt.sign(
+            { id: user.id, username: user.username },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                avatar_url: user.avatar_url || picture
+            }
+        });
+
+    } catch (error) {
+        console.error("Google OAuth pipeline exception:", error.message);
+        res.status(500).json({ error: "Google verification system failed", details: error.message });
+    }
+});
 
 // Launch server
 const PORT = process.env.PORT || 5000;

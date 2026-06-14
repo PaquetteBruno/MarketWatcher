@@ -1,46 +1,178 @@
 import { useState, useEffect } from 'react'
 
 function App() {
+  // 1. Session & Auth States
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  
+  // Auth Form Fields
+  const [authUsername, setAuthUsername] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+
+  // 2. Main Terminal States
   const [activeTab, setActiveTab] = useState('portfolio');
   const [marketData, setMarketData] = useState([]);
-  const [debugLog, setDebugLog] = useState('Initiating connection setup...');
-  const [showConsole, setShowConsole] = useState(true);
+  const [debugLog, setDebugLog] = useState('Waiting for session initialization...');
+  const [showConsole, setShowConsole] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [searchMessage, setSearchMessage] = useState('');
 
+  // 3. Central Startup Loop: Restores local sessions AND initializes Google Identity Buttons
+    // 3. Central Startup Loop: Restores local sessions AND attaches a safe listener for the Google script load
+  useEffect(() => {
+    const savedToken = localStorage.getItem('mw_token');
+    const savedUser = localStorage.getItem('mw_user');
+    
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+      setDebugLog('Session restored safely from local browser vault storage.');
+    } else {
+      setDebugLog('No active session token located. Redirecting to terminal secure wall.');
+    }
+
+    // Isolated Helper Function to build the Google button once the script is verified as fully loaded in memory
+    const initializeGoogleButton = () => {
+      /* global google */
+      if (window.google && (!savedToken || !savedUser)) {
+        google.accounts.id.initialize({
+          client_id: "607204517221-liol36qcu1b51u42a69gid0fthokfvvc.apps.googleusercontent.com", // Your exact client ID is locked in!
+          callback: async (googleResponse) => {
+            setAuthError('');
+            try {
+              setDebugLog('Forwarding secure Google OIDC token passport to Node.js backend...');
+              const res = await fetch('http://localhost:5000/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken: googleResponse.credential })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Google verification rejected.');
+
+              localStorage.setItem('mw_token', data.token);
+              localStorage.setItem('mw_user', JSON.stringify(data.user));
+              setToken(data.token);
+              setUser(data.user);
+            } catch (err) {
+              setAuthError(err.message);
+            }
+          }
+        });
+
+        // Instruct Google to compile their official widget right inside your HTML anchor element
+        google.accounts.id.renderButton(
+          document.getElementById("googleBtnAnchor"),
+          { theme: "outline", size: "large", width: "340" }
+        );
+      }
+    };
+
+    // Race Condition Wall: If Google loaded instantly, trigger initialization immediately
+    if (window.google) {
+      initializeGoogleButton();
+    } else {
+      // If the external script is still traveling across the internet network, listen for the window to finish compiling it
+      window.addEventListener('load', initializeGoogleButton);
+      return () => window.removeEventListener('load', initializeGoogleButton);
+    }
+  }, [token]);
+
+
+  // Combined Market Data Fetch Routine
   const fetchMarketData = async () => {
+    if (!user || !token) return;
     try {
-      setDebugLog('Reaching across local network to Port 5000...');
+      setDebugLog(`Querying backend endpoints for User Account ID: ${user.id}...`);
       const endpoint = activeTab === 'portfolio' 
-        ? `http://localhost:5000/api/watchlist/user/1` 
+        ? `http://localhost:5000/api/watchlist/user/${user.id}` 
         : `http://localhost:5000/api/markets/${activeTab}`;
 
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (!response.ok) {
         const rawText = await response.text();
-        setDebugLog(`Backend error: ${response.status}\n\n${rawText}`);
-        setShowConsole(true);
+        setDebugLog(`Backend error status code: ${response.status}\n\n${rawText}`);
         return;
       }
       const json = await response.json();
       setMarketData(json.data || []);
-      setDebugLog(`Success! Received clean data layout frames.`);
+      setDebugLog(`Success! Standardized data synchronized with ${json.data ? json.data.length : 0} elements.`);
     } catch (error) {
-      setDebugLog(`Frontend Fetch Failure: ${error.message}`);
-      setShowConsole(true);
+      setDebugLog(`Network Fetch Failure: ${error.message}`);
     }
   };
 
   useEffect(() => {
     fetchMarketData();
-  }, [activeTab]);
+  }, [activeTab, user]);
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: authUsername, email: authEmail, password: authPassword })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Account compilation rejected.');
+      alert(data.message);
+      setIsRegistering(false);
+      setAuthPassword('');
+    } catch (err) {
+      setAuthError(err.message);
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail, password: authPassword })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Authentication credential block.');
+
+      localStorage.setItem('mw_token', data.token);
+      localStorage.setItem('mw_user', JSON.stringify(data.user));
+      setToken(data.token);
+      setUser(data.user);
+      setActiveTab('portfolio');
+    } catch (err) {
+      setAuthError(err.message);
+    }
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('mw_token');
+    localStorage.removeItem('mw_user');
+    setToken(null);
+    setUser(null);
+    setMarketData([]);
+    setSearchQuery('');
+    setSearchResult(null);
+    setSearchMessage('');
+    setDebugLog('Session context terminated. Security boundaries cleared out safely.');
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery) return;
-    setSearchMessage('Searching global ticker databases...');
+    setSearchMessage('Searching ticker databases...');
     setSearchResult(null);
     try {
       const response = await fetch(`http://localhost:5000/api/search?symbol=${searchQuery}`);
@@ -54,14 +186,13 @@ function App() {
   };
 
   const handleAddToWatchlist = async () => {
-    if (!searchResult) return;
-    setSearchMessage('Linking asset to account table...');
+    if (!searchResult || !user) return;
     try {
       const response = await fetch('http://localhost:5000/api/watchlist/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: 1, 
+          user_id: user.id,
           symbol: searchResult.symbol,
           name: searchResult.name,
           exchange: searchResult.exchange || 'NASDAQGS',
@@ -73,61 +204,128 @@ function App() {
       setSearchMessage(data.message || 'Added successfully!');
       setSearchResult(null);
       setSearchQuery('');
-      fetchMarketData();
+      if (activeTab === 'portfolio') fetchMarketData();
     } catch (error) {
       setSearchMessage(`Failed to save link: ${error.message}`);
     }
   };
 
   const handleRemoveFromWatchlist = async (symbolToDrop) => {
-    // 🛡️ Native Confirmation Safety Wall
     const userConfirmed = window.confirm(`Are you sure you want to remove ${symbolToDrop} from your watchlist?`);
-    if (!userConfirmed) return; // Exit immediately if they click "Cancel"
-
-    setDebugLog(`Sending deletion request for symbol: ${symbolToDrop}`);
+    if (!userConfirmed || !user) return;
     try {
       const response = await fetch('http://localhost:5000/api/watchlist/remove', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: 1, symbol: symbolToDrop })
+        body: JSON.stringify({ user_id: user.id, symbol: symbolToDrop })
       });
       if (!response.ok) throw new Error('Deletion request failed.');
       fetchMarketData();
     } catch (error) {
       setDebugLog(`Removal Failure: ${error.message}`);
-      setShowConsole(true);
     }
   };
 
-
   const cellStyle = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-
+  // ==========================================
+  // 🔐 SECURE WALL: LOGIN / SIGNUP SCREEN INTERFACE
+  // ==========================================
+  if (!token || !user) {
     return (
+      <div style={{ backgroundColor: '#0d1117', color: '#c9d1d9', fontFamily: 'sans-serif', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box' }}>
+        <div style={{ background: '#161b22', border: '1px solid #21262d', width: '100%', maxWidth: '400px', padding: '40px 30px', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+          <header style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <h1 style={{ color: '#ffffff', margin: '0 0 10px 0', fontSize: '28px' }}>📊 MarketWatcher</h1>
+            <p style={{ color: '#8b949e', margin: 0, fontSize: '14px' }}>
+              {isRegistering ? 'Generate a secure developer terminal account' : 'Sign in to unlock your personalized data matrices'}
+            </p>
+          </header>
+
+          <form onSubmit={isRegistering ? handleRegister : handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {isRegistering && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '13px', color: '#8b949e', fontWeight: '500' }}>Username</label>
+                <input type="text" placeholder="developer_bruno" value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} required style={{ padding: '12px', background: '#010409', color: '#fff', border: '1px solid #21262d', borderRadius: '6px', fontSize: '14px' }} />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '13px', color: '#8b949e', fontWeight: '500' }}>Email Address</label>
+              <input type="email" placeholder="bruno@example.com" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} required style={{ padding: '12px', background: '#010409', color: '#fff', border: '1px solid #21262d', borderRadius: '6px', fontSize: '14px' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '13px', color: '#8b949e', fontWeight: '500' }}>Password</label>
+              <input type="password" placeholder="••••••••••••" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} required style={{ padding: '12px', background: '#010409', color: '#fff', border: '1px solid #21262d', borderRadius: '6px', fontSize: '14px' }} />
+            </div>
+
+            {authError && <p style={{ color: '#f85149', margin: 0, fontSize: '13px', fontWeight: '600' }}>⚠️ {authError}</p>}
+
+            <button type="submit" style={{ padding: '12px', background: '#238636', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', marginTop: '10px' }}>
+              {isRegistering ? 'Compile & Register Account' : 'Authenticate Security Session'}
+            </button>
+          </form>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', borderTop: '1px solid #21262d', paddingTop: '20px', alignItems: 'center' }}>
+            <div id="googleBtnAnchor" style={{ width: '100%', minHeight: '40px' }}></div>
+            <button onClick={() => alert('Facebook Identity OAuth coming next!')} style={{ padding: '10px', background: '#1877f2', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', maxWidth: '340px' }}>
+              📘 Continue with Facebook
+            </button>
+          </div>
+
+          <footer style={{ marginTop: '25px', textAlign: 'center', fontSize: '13px', color: '#8b949e' }}>
+            {isRegistering ? 'Already have a terminal gateway card?' : 'New to this global tracking station?'} {' '}
+            <button onClick={() => { setIsRegistering(!isRegistering); setAuthError(''); }} style={{ background: 'transparent', border: 'none', color: '#58a6ff', cursor: 'pointer', padding: 0, textDecoration: 'underline', fontStyle: 'italic' }}>
+              {isRegistering ? 'Sign In Here' : 'Create Account Here'}
+            </button>
+          </footer>
+        </div>
+      </div>
+    );
+  }
+  // ==========================================
+  // 💻 MAIN LIVE TRADING TERMINAL USER INTERFACE
+  // ==========================================
+  return (
     <div style={{ backgroundColor: '#0d1117', color: '#c9d1d9', fontFamily: 'sans-serif', minHeight: '100vh', padding: '40px 20px', boxSizing: 'border-box' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         
-        {/* Header */}
-        <header style={{ marginBottom: '40px', borderBottom: '1px solid #21262d', paddingBottom: '20px' }}>
-          <h1 style={{ color: '#ffffff', margin: '0 0 10px 0', fontSize: '32px' }}>
-            📊 MarketWatcher <span style={{ fontSize: '16px', color: '#58a6ff' }}>Account Watchlist Terminal</span>
-          </h1>
-          <p style={{ color: '#8b949e', margin: 0 }}>Logged in as: <strong style={{color: '#58a6ff'}}>developer_bruno</strong> (User Account Node ID: 1)</p>
+        {/* Header containing Profile and Sign Out Trigger */}
+        <header style={{ marginBottom: '40px', borderBottom: '1px solid #21262d', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ color: '#ffffff', margin: '0 0 5px 0', fontSize: '32px' }}>
+              📊 MarketWatcher <span style={{ fontSize: '16px', color: '#58a6ff' }}>Secure Node</span>
+            </h1>
+            <p style={{ color: '#8b949e', margin: 0 }}>
+              Welcome back, <strong style={{color: '#58a6ff'}}>{user.username}</strong>! (Authenticated Node ID: {user.id})
+            </p>
+          </div>
+          <button 
+            onClick={handleSignOut} 
+            style={{ 
+              background: 'transparent', 
+              color: '#58a6ff', 
+              border: '1px solid #58a6ff', 
+              padding: '8px 16px', 
+              borderRadius: '6px', 
+              cursor: 'pointer', 
+              fontSize: '13px', 
+              fontWeight: '600', 
+              transition: 'all 0.2s ease' 
+            }}
+            onMouseEnter={(e) => e.target.style.background = 'rgba(88, 166, 255, 0.1)'}
+            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+          >
+            Sign Out
+          </button>
         </header>
 
         {/* Search Layout Module */}
         <div style={{ background: '#161b22', border: '1px solid #21262d', padding: '24px', borderRadius: '8px', marginBottom: '40px' }}>
           <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '15px' }}>🔍 Search & Add Assets to Your Account List</h3>
           <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px' }}>
-            <input 
-              type="text" 
-              placeholder="Type any asset code (e.g. TSLA, NVDA, ETH, AMZN)" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ flex: 1, padding: '12px', background: '#010409', color: '#fff', border: '1px solid #21262d', borderRadius: '6px', fontSize: '14px' }}
-            />
-            <button type="submit" style={{ padding: '12px 24px', background: '#238636', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-              Search
-            </button>
+            <input type="text" placeholder="Type any asset code (e.g. TSLA, NVDA, ETH, AMZN)" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ flex: 1, padding: '12px', background: '#010409', color: '#fff', border: '1px solid #21262d', borderRadius: '6px', fontSize: '14px' }} />
+            <button type="submit" style={{ padding: '12px 24px', background: '#238636', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Search</button>
           </form>
           {searchMessage && <p style={{ color: '#58a6ff', marginTop: '15px', marginBottom: 0, fontSize: '14px' }}>{searchMessage}</p>}
           {searchResult && (
@@ -137,9 +335,7 @@ function App() {
                 <span style={{ color: '#8b949e', marginLeft: '10px' }}>— {searchResult.name}</span>
                 <div style={{ fontSize: '20px', color: '#fff', marginTop: '5px', fontFamily: 'monospace' }}>${searchResult.price}</div>
               </div>
-              <button onClick={handleAddToWatchlist} style={{ padding: '10px 20px', background: '#58a6ff', color: '#0d1117', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                ➕ Pin to My Personal Dashboard List
-              </button>
+              <button onClick={handleAddToWatchlist} style={{ padding: '10px 20px', background: '#58a6ff', color: '#0d1117', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>➕ Pin to My Personal Dashboard List</button>
             </div>
           )}
         </div>
@@ -153,7 +349,7 @@ function App() {
           ))}
         </div>
 
-        {/* Immovable Column Grid Data Sheet */}
+                {/* Immovable Column Grid Data Sheet */}
         <div style={{ background: '#161b22', border: '1px solid #21262d', borderRadius: '10px', padding: '10px 20px', marginBottom: '40px', overflowX: 'auto' }}>
           {marketData.length > 0 ? (
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
