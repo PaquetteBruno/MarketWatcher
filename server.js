@@ -47,150 +47,147 @@ const authenticateToken = (req, res, next) => {
     }
 };
 
+// Pull every assets for the signed in user
+app.get('/api/watchlist/user/:id', async (req, res) => {
+    const userId = req.params.id;
 
-app.get('/api/markets/nasdaq', authenticateToken, async (req, res) => {
     try {
-        const userId = req.user.id; // 💥 NO MORE HARDCODING! Reads your live logged-in ID automatically!
 
-        const [savedStocks] = await db.query(
-            "SELECT symbol FROM watchlists WHERE user_id = ? AND exchange = 'NASDAQGS'",
+        // 1. Query MySQL to find every symbol this specific user has manually saved
+        const [stocks] = await db.query(
+            'SELECT id, symbol FROM watchlists WHERE user_id = ?',
             [userId]
         );
 
-        if (savedStocks.length === 0) {
+        if (stocks.length === 0) {
+            return res.json({ market: 'All', data: [] });
+        }
+
+        for (const stock of stocks) {
+            let liveStock;
+            
+            try {
+                liveStock = await yahooFinance.quote(stock.symbol);
+
+                stock.price = liveStock.regularMarketPrice;
+                stock.price_change = `${liveStock.regularMarketChangePercent >= 0 ? '+' : ''}${liveStock.regularMarketChangePercent.toFixed(2)}%`
+
+                await db.query(
+                    "update watchlists set price = ?, price_change = ? where id = ?",
+                    [stock.price, stock.price_change, stock.id]
+                );
+            } catch (error) {
+                console.error("Error while retrieving watchlist for user : " + userId, error.message);
+                res.status(500).json({ error: "Failed to load account watchlist data", details: error.message });
+            }
+        }
+
+        res.json({ market: 'All', data: stocks.filter(item => item !== null) });
+
+    } catch (error) {
+        console.error("Error while retrieving watchlist for user : " + userId, error.message);
+        res.status(500).json({ error: "Failed to load account watchlist data", details: error.message });
+    }
+});
+
+app.get('/api/markets/nasdaq', authenticateToken, async (req, res) => {
+    const userId = req.user.id;    
+    
+    try {
+
+        const [stocks] = await db.query(
+            `SELECT id, symbol FROM watchlists WHERE user_id = ?  AND exchange = 'NASDAQGS'`,
+            [userId]
+        );
+
+        if (stocks.length === 0) {
             return res.json({ market: 'NASDAQGS', data: [] });
         }
 
-        // 2. Fetch live data from Yahoo Finance for those specific user-selected symbols
-        const updatedStocks = await Promise.all(
-            savedStocks.map(async (stock) => {
-                try {
-                    const data = await yahooFinance.quote(stock.symbol);
-                    
-                    // Double check with Yahoo data to ensure it belongs to the NASDAQ exchange
-                    if (data.market !== 'nasdaq_market' && data.exchange !== 'NMS') {
-                        // Optional fallback filtering helper logic
-                    }
+        for (const stock of stocks) {
+            const liveStock = await yahooFinance.quote(stock.symbol);
 
-                    const stockData = {
-                        id: stock.id,
-                        symbol: stock.symbol,
-                        name: data.longName || data.shortName || stock.symbol,
-                        exchange: 'NASDAQGS',
-                        price: data.regularMarketPrice,
-                        price_change: `${data.regularMarketChangePercent >= 0 ? '+' : '-'}${data.regularMarketChangePercent.toFixed(2)}%`
-                    };
+            stock.price = liveStock.regularMarketPrice;
+            stock.price_change = `${liveStock.regularMarketChangePercent >= 0 ? '+' : ''}${liveStock.regularMarketChangePercent.toFixed(2)}%`
 
-                    // Sync to your base tables cache
-                    await db.query(
-                    "UPDATE watchlists set price = ?, price_change = ? where id = ?",
-                        [stockData.price, stockData.price_change, stockData.id]
-                    );
+            await db.query(
+                "update watchlists set price = ?, price_change = ? where id = ?",
+                [stock.price, stock.price_change, stock.id]
+            );
+        }
 
-                    return stockData;
-                } catch (err) {
-                    // Fallback to local cache if Yahoo connection limits are reached
-                    const [cached] = await db.query('SELECT name, price, price_change AS `change` FROM stocks WHERE symbol = ?', [stock.symbol]);
-                    return cached.length > 0 ? { symbol: stock.symbol, ...cached[0] } : null;
-                }
-            })
-        );
+        res.json({ market: 'NASDAQGS', data: stocks.filter(item => item !== null) });
 
-        res.json({ market: 'NASDAQ', data: updatedStocks.filter(item => item !== null) });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Error while retrieving NASDAQGS stocks for user : " + userId, error.message);
+        res.status(500).json({ error: "Error while retrieving NASDAQGS stocks for user : " + userId, details: error.message });
     }
 });
 
 app.get('/api/markets/nyse', authenticateToken, async (req, res) => {
+    const userId = req.user.id;    
+    
     try {
-        const userId = req.user.id; // Dynamic session hook
 
-        const [savedStocks] = await db.query(
-            "SELECT symbol FROM watchlists WHERE user_id = ? AND exchange = 'NYSE'",
+        const [stocks] = await db.query(
+            `SELECT id, symbol FROM watchlists WHERE user_id = ?  AND exchange = 'NYSE'`,
             [userId]
         );
 
-        if (savedStocks.length === 0) {
+        if (stocks.length === 0) {
             return res.json({ market: 'NYSE', data: [] });
         }
 
-        const updatedStocks = await Promise.all(
-            savedStocks.map(async (stock) => {
-                try {
-                    const data = await yahooFinance.quote(stock.symbol);
-                    
-                    const stockData = {
-                        id: stock.id,
-                        symbol: stock.symbol,
-                        name: data.longName || data.shortName || stock.symbol,
-                        exchange: 'NYSE',
-                        price: data.regularMarketPrice,
-                        price_change: `${data.regularMarketChangePercent >= 0 ? '+' : '-'}${data.regularMarketChangePercent.toFixed(2)}%`
-                    };
+        for (const stock of stocks) {
+            const liveStock = await yahooFinance.quote(stock.symbol);
 
-                    await db.query(
-                    "UPDATE watchlists set price = ?, price_change = ? where id = ?" ,
-                        [stockData.price, stockData.price_change, stockData.id]
-                    );
+            stock.price = liveStock.regularMarketPrice;
+            stock.price_change = `${liveStock.regularMarketChangePercent >= 0 ? '+' : ''}${liveStock.regularMarketChangePercent.toFixed(2)}%`
 
-                    return stockData;
-                } catch (err) {
-                    const [cached] = await db.query('SELECT name, price, price_change AS `change` FROM stocks WHERE symbol = ?', [stock.symbol]);
-                    return cached.length > 0 ? { symbol: stock.symbol, ...cached[0] } : null;
-                }
-            })
-        );
+            await db.query(
+                "update watchlists set price = ?, price_change = ? where id = ?",
+                [stock.price, stock.price_change, stock.id]
+            );
+        }
 
-        res.json({ market: 'NYSE', data: updatedStocks.filter(item => item !== null) });
+        res.json({ market: 'NYSE', data: stocks.filter(item => item !== null) });
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Error while retrieving NYSE stocks for user : " + userId, error.message);
+        res.status(500).json({ error: "Error while retrieving NYSE stocks for user : " + userId, details: error.message });
     }
 });
 
 app.get('/api/markets/crypto', authenticateToken, async (req, res) => {
+    const userId = req.user.id;    
+    
     try {
-        const userId = req.user.id; // Dynamic session hook
-
-        const [savedCrypto] = await db.query(
-            "SELECT symbol FROM watchlists WHERE user_id = ? AND exchange = 'CRYPTO'",
+        const [stocks] = await db.query(
+            `SELECT id, symbol FROM watchlists WHERE user_id = ?  AND exchange = 'CRYPTO'`,
             [userId]
         );
 
-        if (savedCrypto.length === 0) {
-            return res.json({ market: 'Crypto', data: [] });
+        if (stocks.length === 0) {
+            return res.json({ market: 'NYSE', data: [] });
         }
 
-        const updatedCrypto = await Promise.all(
-            savedCrypto.map(async (crypto) => {
-                try {
-                    const data = await yahooFinance.quote(`${crypto.symbol}-USD`);
-                    
-                    const cryptoData = {
-                        id: crypto.id,
-                        symbol: crypto.symbol,
-                        name: data.shortName || crypto.symbol,
-                        price: data.regularMarketPrice,
-                        change: `${data.regularMarketChangePercent >= 0 ? '+' : '-'}${data.regularMarketChangePercent.toFixed(2)}%`
-                    };
+        for (const stock of stocks) {
+            const liveStock = await yahooFinance.quote(stock.symbol);
 
-                    await db.query(
-                        `INSERT INTO crypto (symbol, name, price, price_change) VALUES (?, ?, ?, ?)
-                         ON DUPLICATE KEY UPDATE price=VALUES(price), price_change=VALUES(price_change)`,
-                        [cryptoData.symbol, cryptoData.name, cryptoData.price, cryptoData.change]
-                    );
+            stock.price = liveStock.regularMarketPrice;
+            stock.price_change = `${liveStock.regularMarketChangePercent >= 0 ? '+' : ''}${liveStock.regularMarketChangePercent.toFixed(2)}%`
 
-                    return cryptoData;
-                } catch (err) {
-                    const [cached] = await db.query('SELECT name, price, price_change AS `change` FROM crypto WHERE symbol = ?', [crypto.symbol]);
-                    return cached.length > 0 ? { symbol: crypto.symbol, ...cached[0] } : null;
-                }
-            })
-        );
+            await db.query(
+                "update watchlists set price = ?, price_change = ? where id = ?",
+                [stock.price, stock.price_change, stock.id]
+            );
+        }
 
-        res.json({ market: 'Crypto', data: updatedCrypto.filter(item => item !== null) });
+        res.json({ market: 'CRYPTO', data: stocks.filter(item => item !== null) });
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Error while retrieving CRYPTO stocks for user : " + userId, error.message);
+        res.status(500).json({ error: "Error while retrieving CRYPTO stocks for user : " + userId, details: error.message });
     }
 });
 
@@ -204,72 +201,81 @@ app.get('/api/markets/macro', async (req, res) => {
             const liveMacro = await yahooFinance.quote(macro.symbol);
 
             macro.price = liveMacro.regularMarketPrice;
-            macro.price_change = `${liveMacro.regularMarketChangePercent >= 0 ? '+' : '-'}${liveMacro.regularMarketChangePercent.toFixed(2)}%`
-            macro.name = liveMacro.shortName;
-            macro.category = liveMacro.quoteType;
+            macro.price_change = `${liveMacro.regularMarketChangePercent >= 0 ? '+' : ''}${liveMacro.regularMarketChangePercent.toFixed(2)}%`
 
             await db.query(
-                "update macro_assets set name = ?, price = ?, price_change = ?, category = ? where id = ?",
-                [macro.name, macro.price, macro.price_change, macro.category, macro.id]
+                "update macro_assets set price = ?, price_change = ? where id = ?",
+                [macro.price, macro.price_change, macro.id]
             );
         }
 
-        res.json({ market: 'Macro Options', data: macros });
+        res.json({ market: 'Macro', data: macros.filter(item => item !== null)  });
 
     } catch (error) {
-        console.warn("Notice: Macro pipeline fallback initiated:", error.message);
-        try {
-            const [rows] = await db.query('SELECT symbol, name, price, price_change AS `change` FROM macro_assets');
-            res.json({ market: 'Macro Options (Cached)', data: rows, rawDebug: `Yahoo Error: ${error.message}` });
-        } catch (dbError) {
-            res.status(500).json({ error: "Database query failed completely", details: dbError.message });
-        }
+        console.error("Error while retrieving MACRO data", error.message);
+        res.status(500).json({ error: "Error while retrieving MACRO data", details: error.message });
     }
 });
 
 // 6. Global Search Endpoint: Fetches any asset symbol from Yahoo Finance instantly
+// 6. Upgraded Multi-Asset Search Endpoint: Scans both Symbols and Names
 app.get('/api/search', async (req, res) => {
     try {
-        const { symbol } = req.query;
-        if (!symbol) return res.status(400).json({ error: "Missing symbol query parameter" });
+        const { query } = req.query;
+        if (!query) return res.status(400).json({ error: "Missing query parameter" });
 
-        // Query Yahoo Finance for the searched asset ticker
-        const data = await yahooFinance.quote(symbol.toUpperCase());
-
-        if (!data || !data.regularMarketPrice) {
-            return res.status(444).json({ error: "Asset symbol not found on global markets" });
+        // 1. Call Yahoo Finance's internal search discovery scanner
+        const searchResults = await yahooFinance.search(query, { newsCount: 0 });
+        
+        // If no global instruments match the typed query string, return a clean empty frame
+        if (!searchResults || !searchResults.quotes || searchResults.quotes.length === 0) {
+            return res.json([]);
         }
 
-        const normalizedAsset = {
-            symbol: data.symbol.replace('-USD', ''),
-            name: data.longName || data.shortName || data.symbol,
-            price: data.regularMarketPrice,
-            price_change: `${data.regularMarketChangePercent >= 0 ? '+' : ''}${data.regularMarketChangePercent.toFixed(2)}%`,
-            exchange: data.fullExchangeName
-        };
+        // 2. Filter, clean, and map the top discoveries back to your frontend React layout
+        const formattedResults = searchResults.quotes
+            .filter(item => item.isYahooFinance && (item.quoteType === 'EQUITY' || item.quoteType === 'CRYPTOCURRENCY'))
+            .slice(0, 5) // Limit to the top 5 most relevant global matches
+            .map(item => {
+                const isCrypto = item.quoteType === 'CRYPTOCURRENCY';
+                return {
+                    symbol: item.symbol,
+                    name: item.shortname || item.longname || item.symbol,
+                    exchange: isCrypto ? 'CRYPTO' : (item.exchange === 'NMS' ? 'NASDAQGS' : item.exchange)
+/*                     price: item.regularMarketPrice,
+                    price_change: `${item.regularMarketChangePercent >= 0 ? '+' : ''}${item.regularMarketChangePercent.toFixed(2)}%` */
+                };
+            });
 
-        res.json(normalizedAsset);
+        res.json(formattedResults);
     } catch (error) {
-        res.status(500).json({ error: "Search query failed", details: error.message });
+        console.error("Autocomplete search error:", error.message);
+        res.status(500).json({ error: "Discovery scanner failed", details: error.message });
     }
-}); 
+});
+
 
 // 7. Relational Add Endpoint: Connects an asset symbol to your specific user ID
 app.post('/api/watchlist/add', async (req, res) => {
     try {
-        const { user_id, symbol, name, exchange, price, price_change } = req.body;
-        
-        if (!user_id || !symbol || !exchange) {
-            return res.status(400).json({ error: "Missing required fields: user_id, symbol, exchange" });
-        }
+        const liveMacro = await yahooFinance.quote(req.body.symbol);
 
-        // Insert into your watchlists table, linking the asset symbol to the user account
         await db.query(
-            `INSERT INTO watchlists (user_id, symbol, name, exchange, price, price_change) VALUES (?, ?, ?, ?, ?, ?)`,
-            [user_id, symbol.toUpperCase(), name, exchange.toUpperCase(), price, price_change]
-          );
+        `INSERT INTO watchlists (user_id, symbol, name, exchange, price, price_change) VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+            price = VALUES(price),
+            price_change = VALUES(price_change)`,
+        [
+            req.body.user_id, 
+            liveMacro.symbol.toUpperCase(), 
+            liveMacro.shortName, 
+            req.body.exchange.toUpperCase(), 
+            liveMacro.regularMarketPrice, 
+            `${liveMacro.regularMarketChangePercent >= 0 ? '+' : ''}${liveMacro.regularMarketChangePercent.toFixed(2)}%`
+        ]
+        );
 
-        res.json({ message: `Successfully added ${symbol} ${name} to your personal account list!` });
+        res.json({ message: `Successfully added ${liveMacro.symbol.toUpperCase()} ${liveMacro.shortName} to your personal account list!` });
     } catch (error) {
         res.status(500).json({ error: "Failed to link asset to account", details: error.message });
     }
@@ -297,34 +303,6 @@ app.delete('/api/watchlist/remove', async (req, res) => {
         res.json({ message: `Successfully unpinned ${symbol} from your dashboard list!` });
     } catch (error) {
         res.status(500).json({ error: "Failed to drop asset link", details: error.message });
-    }
-});
-
-
-// 8. Personalized Watchlist Endpoint: Pulls and syncs ONLY user-selected assets
-app.get('/api/watchlist/user/:id', async (req, res) => {
-    try {
-        const userId = req.params.id;
-
-        // 1. Query MySQL to find every symbol this specific user has manually saved
-        const [savedAssets] = await db.query(
-            'SELECT symbol, name, exchange, price, price_change FROM watchlists WHERE user_id = ?',
-            [userId]
-        );
-
-        // If the user's watchlist is brand new and completely empty, return clean empty data frames
-        if (savedAssets.length === 0) {
-            return res.json({ market: 'My Watchlist', data: [] });
-        }
-
-        // Filter out any broken or unparsed asset entries cleanly
-        const cleanPortfolio = savedAssets.filter(item => item !== null);
-
-        res.json({ market: 'My Watchlist', data: savedAssets });
-
-    } catch (error) {
-        console.error("Watchlist retrieval pipeline malfunction:", error.message);
-        res.status(500).json({ error: "Failed to load account watchlist data", details: error.message });
     }
 });
 
