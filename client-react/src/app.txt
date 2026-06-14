@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 
 function App() {
+  // Set default starting view state to 'portfolio' for an empty, clean account experience!
   const [activeTab, setActiveTab] = useState('portfolio');
   const [marketData, setMarketData] = useState([]);
   const [debugLog, setDebugLog] = useState('Initiating connection setup...');
@@ -10,25 +11,30 @@ function App() {
   const [searchResult, setSearchResult] = useState(null);
   const [searchMessage, setSearchMessage] = useState('');
 
+  // Combined Fetch Routine
   const fetchMarketData = async () => {
     try {
       setDebugLog('Reaching across local network to Port 5000...');
+      
+      // Determine endpoint path based on whether user is checking macro indices or their personal portfolio list
       const endpoint = activeTab === 'portfolio' 
-        ? `http://localhost:5000/api/watchlist/user/1` 
+        ? `http://localhost:5000/api/watchlist/user/1` // Simulating Logged In User ID: 1
         : `http://localhost:5000/api/markets/${activeTab}`;
 
       const response = await fetch(endpoint);
+      
       if (!response.ok) {
         const rawText = await response.text();
-        setDebugLog(`Backend error: ${response.status}\n\n${rawText}`);
+        setDebugLog(`Backend returned an error status code: ${response.status}\n\n${rawText}`);
         setShowConsole(true);
         return;
       }
+
       const json = await response.json();
       setMarketData(json.data || []);
-      setDebugLog(`Success! Received clean data layout frames.`);
+      setDebugLog(`Success! Received clean JSON data array with ${json.data ? json.data.length : 0} items.`);
     } catch (error) {
-      setDebugLog(`Frontend Fetch Failure: ${error.message}`);
+      setDebugLog(`Frontend Network Fetch Failure: ${error.message}`);
       setShowConsole(true);
     }
   };
@@ -42,9 +48,11 @@ function App() {
     if (!searchQuery) return;
     setSearchMessage('Searching global ticker databases...');
     setSearchResult(null);
+
     try {
       const response = await fetch(`http://localhost:5000/api/search?symbol=${searchQuery}`);
-      if (!response.ok) throw new Error('Ticker symbol not recognized.');
+      if (!response.ok) throw new Error('Ticker symbol not recognized on any global exchange.');
+      
       const data = await response.json();
       setSearchResult(data);
       setSearchMessage('');
@@ -56,6 +64,7 @@ function App() {
   const handleAddToWatchlist = async () => {
     if (!searchResult) return;
     setSearchMessage('Linking asset to account table...');
+
     try {
       const response = await fetch('http://localhost:5000/api/watchlist/add', {
         method: 'POST',
@@ -64,45 +73,34 @@ function App() {
           user_id: 1, 
           symbol: searchResult.symbol,
           name: searchResult.name,
-          exchange: searchResult.exchange || 'NASDAQGS',
+          exchange: searchResult.exchange,
           price: searchResult.price,
           price_change: searchResult.price_change
         })
       });
+
       const data = await response.json();
-      setSearchMessage(data.message || 'Added successfully!');
+      setSearchMessage(data.message || searchResult.symbol + ' was added successfully to your watchlist!');
       setSearchResult(null);
       setSearchQuery('');
-      fetchMarketData();
+      
+      // Force refresh the active portfolio view grid dynamically upon addition!
+      if (activeTab === 'portfolio') {
+        fetchMarketData();
+      }
     } catch (error) {
       setSearchMessage(`Failed to save link: ${error.message}`);
     }
   };
 
-  const handleRemoveFromWatchlist = async (symbolToDrop) => {
-    // 🛡️ Native Confirmation Safety Wall
-    const userConfirmed = window.confirm(`Are you sure you want to remove ${symbolToDrop} from your watchlist?`);
-    if (!userConfirmed) return; // Exit immediately if they click "Cancel"
-
-    setDebugLog(`Sending deletion request for symbol: ${symbolToDrop}`);
-    try {
-      const response = await fetch('http://localhost:5000/api/watchlist/remove', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: 1, symbol: symbolToDrop })
-      });
-      if (!response.ok) throw new Error('Deletion request failed.');
-      fetchMarketData();
-    } catch (error) {
-      setDebugLog(`Removal Failure: ${error.message}`);
-      setShowConsole(true);
-    }
+    // Shared Ellipsis Style Rule to keep rows uniform and clip long text safely
+  const cellEllipsisStyle = {
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   };
 
-
-  const cellStyle = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-
-    return (
+  return (
     <div style={{ backgroundColor: '#0d1117', color: '#c9d1d9', fontFamily: 'sans-serif', minHeight: '100vh', padding: '40px 20px', boxSizing: 'border-box' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         
@@ -129,7 +127,9 @@ function App() {
               Search
             </button>
           </form>
+
           {searchMessage && <p style={{ color: '#58a6ff', marginTop: '15px', marginBottom: 0, fontSize: '14px' }}>{searchMessage}</p>}
+
           {searchResult && (
             <div style={{ marginTop: '20px', padding: '15px', background: '#21262d', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -153,33 +153,58 @@ function App() {
           ))}
         </div>
 
-        {/* Immovable Column Grid Data Sheet */}
+        {/* 📋 IMMOVABLE LOCKED WIDTH COLUMN GRID DATA SHEET */}
         <div style={{ background: '#161b22', border: '1px solid #21262d', borderRadius: '10px', padding: '10px 20px', marginBottom: '40px', overflowX: 'auto' }}>
           {marketData.length > 0 ? (
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
+            <table style={{ 
+              width: '100%', 
+              borderCollapse: 'collapse', 
+              textAlign: 'left', 
+              tableLayout: 'fixed' // Crucial: Fixes overall column tracking layout [1]
+            }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #30363d', color: '#8b949e', fontSize: '13px' }}>
+                  {/* Explicit widths assigned here set the permanent rules for the entire column layout vertical grid [1] */}
                   <th style={{ padding: '16px 12px', fontWeight: '600', width: '15%' }}>SYMBOL</th>
-                  <th style={{ padding: '16px 12px', fontWeight: '600', width: '40%' }}>NAME</th>
+                  <th style={{ padding: '16px 12px', fontWeight: '600', width: '45%' }}>NAME</th>
                   <th style={{ padding: '16px 12px', fontWeight: '600', width: '20%' }}>EXCHANGE</th>
                   <th style={{ padding: '16px 12px', fontWeight: '600', width: '10%' }}>PRICE</th>
                   <th style={{ padding: '16px 12px', fontWeight: '600', width: '10%', textAlign: 'right' }}>CHANGE</th>
-                  <th style={{ padding: '16px 12px', fontWeight: '600', width: '5%', textAlign: 'center' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {marketData.map((asset) => {
-                  const isPositive = asset.price_change && asset.price_change.startsWith('+');
+                  const isPositive = asset.change && asset.change.startsWith('+');
                   return (
                     <tr key={asset.symbol} style={{ borderBottom: '1px solid #21262d', fontSize: '14px' }}>
-                      <td style={{ ...cellStyle, padding: '16px 12px', fontWeight: '700', color: '#ffffff' }}>{asset.symbol}</td>
-                      <td style={{ ...cellStyle, padding: '16px 12px', color: '#c9d1d9' }} title={asset.name}>{asset.name}</td>
-                      <td style={{ ...cellStyle, padding: '16px 12px', color: '#8b949e', fontSize: '12px', textTransform: 'uppercase' }}>{asset.exchange || activeTab}</td>
-                      <td style={{ ...cellStyle, padding: '16px 12px', color: '#ffffff', fontFamily: 'monospace', fontWeight: '600' }}>${parseFloat(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                      <td style={{ ...cellStyle, padding: '16px 12px', color: isPositive ? '#3fb950' : '#f85149', fontWeight: '700', fontFamily: 'monospace', textAlign: 'right' }}>{asset.price_change}</td>
-                      <td style={{ padding: '16px 12px', textAlign: 'center' }}>
-                        <button onClick={() => handleRemoveFromWatchlist(asset.symbol)} style={{ background: 'transparent', color: '#8b949e', border: 'none', cursor: 'pointer', fontSize: '13px', padding: 0 }} title="Remove from List">🗑️</button>
+                      
+                      <td style={{ ...cellEllipsisStyle, padding: '16px 12px', fontWeight: '700', color: '#ffffff' }}>
+                        {asset.symbol}
                       </td>
+                      
+                      <td style={{ ...cellEllipsisStyle, padding: '16px 12px', color: '#c9d1d9' }} title={asset.name}>
+                        {asset.name}
+                      </td>
+                      
+                      <td style={{ ...cellEllipsisStyle, padding: '16px 12px', color: '#8b949e', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {asset.market || activeTab}
+                      </td>
+                      
+                      <td style={{ ...cellEllipsisStyle, padding: '16px 12px', color: '#ffffff', fontFamily: 'monospace', fontWeight: '600' }}>
+                        ${parseFloat(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      
+                      <td style={{ 
+                        ...cellEllipsisStyle,
+                        padding: '16px 12px', 
+                        color: isPositive ? '#3fb950' : '#f85149', 
+                        fontWeight: '700',
+                        fontFamily: 'monospace',
+                        textAlign: 'right'
+                      }}>
+                        {asset.price_change}
+                      </td>
+
                     </tr>
                   )
                 })}
@@ -192,9 +217,12 @@ function App() {
           )}
         </div>
 
-        {/* Console Controls */}
+              {/* Debug Console Section Controls */}
         <div style={{ textAlign: 'right', marginTop: '40px' }}>
-          <button onClick={() => setShowConsole(!showConsole)} style={{ background: '#21262d', color: '#8b949e', border: '1px solid #30363d', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
+          <button 
+            onClick={() => setShowConsole(!showConsole)} 
+            style={{ background: '#21262d', color: '#8b949e', border: '1px solid #30363d', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+          >
             {showConsole ? 'Hide System Console' : 'Show System Console'}
           </button>
         </div>
@@ -202,7 +230,22 @@ function App() {
         {/* System Console Panel */}
         <div style={{ marginTop: '30px', borderTop: '1px solid #21262d', paddingTop: '30px', display: showConsole ? 'block' : 'none' }}>
           <h3 style={{ color: '#ffffff', marginBottom: '10px', fontSize: '16px' }}>🖥️ System Console Logger</h3>
-          <textarea readOnly value={debugLog} style={{ width: '100%', height: '140px', background: '#010409', color: '#7cfc00', padding: '16px', fontFamily: 'monospace', fontSize: '12px', border: '1px solid #21262d', borderRadius: '6px', resize: 'none' }} />
+          <textarea 
+            readOnly 
+            value={debugLog} 
+            style={{ 
+              width: '100%', 
+              height: '140px', 
+              background: '#010409', 
+              color: '#7cfc00', 
+              padding: '16px', 
+              fontFamily: 'monospace', 
+              fontSize: '12px', 
+              border: '1px solid #21262d', 
+              borderRadius: '6px', 
+              resize: 'none' 
+            }} 
+          />
         </div>
 
       </div>
