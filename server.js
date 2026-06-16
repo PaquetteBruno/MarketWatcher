@@ -29,12 +29,11 @@ const db = mysql.createPool({
 // 🛡️ JWT IDENTITY VERIFICATION MIDDLEWARE
 // ==========================================
 const authenticateToken = (req, res, next) => {
-    // Extract the token passport out of the incoming request headers
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Splits "Bearer <TOKEN>"
 
     if (!token) {
-        return res.status(401).json({ error: "Access Denied. Missing session token passport." });
+        return res.status(401).json({ error: "AUTH_MISSING_TOKEN" });
     }
 
     try {
@@ -43,182 +42,51 @@ const authenticateToken = (req, res, next) => {
         req.user = verified; // Binds the decrypted { id, username } right onto the request object!
         next(); // Safely pass execution forward to your database route
     } catch (error) {
-        res.status(403).json({ error: "Invalid or expired session token passport." });
+        res.status(403).json({ error: "AUTH_TOKEN_INVALID" });
     }
 };
 
-// Pull every assets for the signed in user
 app.get('/api/watchlist/user/:id', async (req, res) => {
-    const userId = req.params.id;
-
-    try {
-
-        // 1. Query MySQL to find every symbol this specific user has manually saved
-        const [stocks] = await db.query(
-            'SELECT id, symbol FROM watchlists WHERE user_id = ?',
-            [userId]
-        );
-
-        if (stocks.length === 0) {
-            return res.json({ market: 'All', data: [] });
-        }
-
-        for (const stock of stocks) {
-            let liveStock;
-            
-            try {
-                liveStock = await yahooFinance.quote(stock.symbol);
-
-                stock.price = liveStock.regularMarketPrice;
-                stock.price_change = `${liveStock.regularMarketChangePercent >= 0 ? '+' : ''}${liveStock.regularMarketChangePercent.toFixed(2)}%`
-
-                await db.query(
-                    "update watchlists set price = ?, price_change = ? where id = ?",
-                    [stock.price, stock.price_change, stock.id]
-                );
-            } catch (error) {
-                console.error("Error while retrieving watchlist for user : " + userId, error.message);
-                res.status(500).json({ error: "Failed to load account watchlist data", details: error.message });
-            }
-        }
-
-        res.json({ market: 'All', data: stocks.filter(item => item !== null) });
-
-    } catch (error) {
-        console.error("Error while retrieving watchlist for user : " + userId, error.message);
-        res.status(500).json({ error: "Failed to load account watchlist data", details: error.message });
-    }
+    getAssets(req.params.id, null, res);   
 });
 
 app.get('/api/markets/nasdaq', authenticateToken, async (req, res) => {
-    const userId = req.user.id;    
-    
-    try {
-
-        const [stocks] = await db.query(
-            `SELECT id, symbol FROM watchlists WHERE user_id = ?  AND exchange = 'NASDAQGS'`,
-            [userId]
-        );
-
-        if (stocks.length === 0) {
-            return res.json({ market: 'NASDAQGS', data: [] });
-        }
-
-        for (const stock of stocks) {
-            const liveStock = await yahooFinance.quote(stock.symbol);
-
-            stock.price = liveStock.regularMarketPrice;
-            stock.price_change = `${liveStock.regularMarketChangePercent >= 0 ? '+' : ''}${liveStock.regularMarketChangePercent.toFixed(2)}%`
-
-            await db.query(
-                "update watchlists set price = ?, price_change = ? where id = ?",
-                [stock.price, stock.price_change, stock.id]
-            );
-        }
-
-        res.json({ market: 'NASDAQGS', data: stocks.filter(item => item !== null) });
-
-    } catch (error) {
-        console.error("Error while retrieving NASDAQGS stocks for user : " + userId, error.message);
-        res.status(500).json({ error: "Error while retrieving NASDAQGS stocks for user : " + userId, details: error.message });
-    }
+    getAssets(req.user.id, "NASDAQGS", res);
 });
 
 app.get('/api/markets/nyse', authenticateToken, async (req, res) => {
-    const userId = req.user.id;    
-    
-    try {
-
-        const [stocks] = await db.query(
-            `SELECT id, symbol FROM watchlists WHERE user_id = ?  AND exchange = 'NYSE'`,
-            [userId]
-        );
-
-        if (stocks.length === 0) {
-            return res.json({ market: 'NYSE', data: [] });
-        }
-
-        for (const stock of stocks) {
-            const liveStock = await yahooFinance.quote(stock.symbol);
-
-            stock.price = liveStock.regularMarketPrice;
-            stock.price_change = `${liveStock.regularMarketChangePercent >= 0 ? '+' : ''}${liveStock.regularMarketChangePercent.toFixed(2)}%`
-
-            await db.query(
-                "update watchlists set price = ?, price_change = ? where id = ?",
-                [stock.price, stock.price_change, stock.id]
-            );
-        }
-
-        res.json({ market: 'NYSE', data: stocks.filter(item => item !== null) });
-
-    } catch (error) {
-        console.error("Error while retrieving NYSE stocks for user : " + userId, error.message);
-        res.status(500).json({ error: "Error while retrieving NYSE stocks for user : " + userId, details: error.message });
-    }
+    getAssets(req.user.id, "NYQ", res);
 });
 
 app.get('/api/markets/crypto', authenticateToken, async (req, res) => {
-    const userId = req.user.id;    
-    
+    getAssets(req.user.id, "CRYPTO", res);
+});
+
+app.get('/api/markets/global', async (req, res) => {
     try {
-        const [stocks] = await db.query(
-            `SELECT id, symbol FROM watchlists WHERE user_id = ?  AND exchange = 'CRYPTO'`,
-            [userId]
-        );
 
-        if (stocks.length === 0) {
-            return res.json({ market: 'NYSE', data: [] });
-        }
+        const [globals] = await db.query("SELECT id, symbol, name, price, price_change FROM globals");
 
-        for (const stock of stocks) {
-            const liveStock = await yahooFinance.quote(stock.symbol);
+        for (const global of globals) {
+            const liveGlobal = await yahooFinance.quote(global.symbol);
 
-            stock.price = liveStock.regularMarketPrice;
-            stock.price_change = `${liveStock.regularMarketChangePercent >= 0 ? '+' : ''}${liveStock.regularMarketChangePercent.toFixed(2)}%`
+            global.price = liveGlobal.regularMarketPrice;
+            global.price_change = `${liveGlobal.regularMarketChangePercent >= 0 ? '+' : ''}${liveGlobal.regularMarketChangePercent.toFixed(2)}%`
 
             await db.query(
-                "update watchlists set price = ?, price_change = ? where id = ?",
-                [stock.price, stock.price_change, stock.id]
+                "update globals set price = ?, price_change = ? where id = ?",
+                [global.price, global.price_change, global.id]
             );
         }
 
-        res.json({ market: 'CRYPTO', data: stocks.filter(item => item !== null) });
+        res.json({ market: 'global', data: globals.filter(item => item !== null)  });
 
     } catch (error) {
-        console.error("Error while retrieving CRYPTO stocks for user : " + userId, error.message);
-        res.status(500).json({ error: "Error while retrieving CRYPTO stocks for user : " + userId, details: error.message });
+        console.error("Error while retrieving global data", error.message);
+        res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
     }
 });
 
-// 5. Separate Endpoint: Macro Tracking (Indices, Commodities, Forex)
-app.get('/api/markets/macro', async (req, res) => {
-    try {
-
-        const [macros] = await db.query("SELECT id, symbol, name, category, price, price_change FROM macro_assets");
-
-        for (const macro of macros) {
-            const liveMacro = await yahooFinance.quote(macro.symbol);
-
-            macro.price = liveMacro.regularMarketPrice;
-            macro.price_change = `${liveMacro.regularMarketChangePercent >= 0 ? '+' : ''}${liveMacro.regularMarketChangePercent.toFixed(2)}%`
-
-            await db.query(
-                "update macro_assets set price = ?, price_change = ? where id = ?",
-                [macro.price, macro.price_change, macro.id]
-            );
-        }
-
-        res.json({ market: 'Macro', data: macros.filter(item => item !== null)  });
-
-    } catch (error) {
-        console.error("Error while retrieving MACRO data", error.message);
-        res.status(500).json({ error: "Error while retrieving MACRO data", details: error.message });
-    }
-});
-
-// 6. Global Search Endpoint: Fetches any asset symbol from Yahoo Finance instantly
-// 6. Upgraded Multi-Asset Search Endpoint: Scans both Symbols and Names
 app.get('/api/search', async (req, res) => {
     try {
         const { query } = req.query;
@@ -254,40 +122,53 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
-
-// 7. Relational Add Endpoint: Connects an asset symbol to your specific user ID
 app.post('/api/watchlist/add', async (req, res) => {
     try {
-        const liveMacro = await yahooFinance.quote(req.body.symbol);
+        const liveGlobal = await yahooFinance.quote(req.body.symbol);
+
+        let assetId;
+        const [asset] = await db.query(`SELECT id, symbol FROM Assets where symbol = ?`, [liveGlobal.symbol.toUpperCase()]);
+
+        if (asset.length === 0) {
+            const [result] = await db.query(
+                "INSERT INTO Assets (symbol, name, exchange, price, price_change) VALUES (?, ?, ?, ?, ?)",
+                [
+                    req.body.symbol.toUpperCase(), 
+                    liveGlobal.shortName, 
+                    req.body.exchange.toUpperCase(), 
+                    liveGlobal.regularMarketPrice, 
+                    `${liveGlobal.regularMarketChangePercent >= 0 ? '+' : ''}${liveGlobal.regularMarketChangePercent.toFixed(2)}%`
+                ]
+            );
+
+            assetId = result.insertId;
+        }
+        else {
+            assetId = asset[0].id;
+        }
+
+        const [portfolio] = await db.query("SELECT id from portfolios where user_id = ?", [req.body.user_id])
 
         await db.query(
-        `INSERT INTO watchlists (user_id, symbol, name, exchange, price, price_change) VALUES (?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE 
-            price = VALUES(price),
-            price_change = VALUES(price_change)`,
-        [
-            req.body.user_id, 
-            liveMacro.symbol.toUpperCase(), 
-            liveMacro.shortName, 
-            req.body.exchange.toUpperCase(), 
-            liveMacro.regularMarketPrice, 
-            `${liveMacro.regularMarketChangePercent >= 0 ? '+' : ''}${liveMacro.regularMarketChangePercent.toFixed(2)}%`
-        ]
+            "INSERT INTO watchlists (asset_id, portfolio_id) VALUES (?, ?)",
+            [
+                assetId,
+                portfolio[0].id                
+            ]
         );
 
-        res.json({ message: `Successfully added ${liveMacro.symbol.toUpperCase()} ${liveMacro.shortName} to your personal account list!` });
+        res.json({ message: "ASSET_SUCCESSFULLY_ADDED" });
     } catch (error) {
-        res.status(500).json({ error: "Failed to link asset to account", details: error.message });
+        res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
     }
 });
 
-// 9. Relational Remove Endpoint: Drops a specific asset mapping for a user account
 app.delete('/api/watchlist/remove', async (req, res) => {
     try {
         const { user_id, symbol } = req.body;
         
         if (!user_id || !symbol) {
-            return res.status(400).json({ error: "Missing required fields: user_id, symbol" });
+            return res.status(400).json({ error: "MISSING_FIELDS" });
         }
 
         // Execute targeted deletion query to unpin the row asset from the user account link
@@ -296,74 +177,69 @@ app.delete('/api/watchlist/remove', async (req, res) => {
             [user_id, symbol.toUpperCase()]
         );
 
-        if (result.affectedRows === 0) {
-            return res.status(444).json({ error: "Asset connection mapping not found for this account profile" });
-        }
-
-        res.json({ message: `Successfully unpinned ${symbol} from your dashboard list!` });
+        res.json({ message: "ASSET_SUCCESSFULLY_REMOVED" + `|[${symbol}]` });
     } catch (error) {
-        res.status(500).json({ error: "Failed to drop asset link", details: error.message });
+        res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
     }
 });
 
-// ==========================================
-// 🔐 AUTHENTICATION ROUTING ENGINES
-// ==========================================
-
-// 10. Local Register Endpoint: Creates a new user with a hashed password
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
 
         if (!username || !email || !password) {
-            return res.status(400).json({ error: "Missing required signup fields" });
+            return res.status(400).json({ error: "AUTH_INVALID_CREDENTIALS" });
         }
 
         // Cryptographically hash the password before it ever touches your database logs
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
-        // Save into your newly updated user database table
-        await db.query(
+        const [result] = await db.query(
             `INSERT INTO users (username, email, password_hash, auth_provider) VALUES (?, ?, ?, 'local')`,
             [username, email, passwordHash]
         );
 
-        res.status(201).json({ message: "User account generated successfully! Proceed to login." });
+        await db.query(
+            `INSERT INTO portfolios (user_id, name) VALUES (?, 'New')`,
+            [result.insertId]
+        );
+
+        res.status(201).json({ message: "ACCOUNT_SUCCESSFULLY_GENERATED" });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({ error: "Username or email is already registered." });
+            return res.status(409).json({ error: "AUTH_USER_EXISTS" });
         }
-        res.status(500).json({ error: "Registration failed", details: error.message });
+        res.status(500).json({ error: "AUTH_FAILED", details: error.message });
     }
 });
 
-// 11. Local Login Endpoint: Verifies credentials and hands back a secure JWT token passport
+// Local Login Endpoint: Verifies credentials and hands back a secure JWT token passport
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ error: "Missing required login credentials" });
+            return res.status(401).json({ error: "AUTH_INVALID_CREDENTIALS" });
         }
 
         // Query the DB to check if the user profile exists
         const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
         if (users.length === 0) {
-            return res.status(401).json({ error: "Invalid email or password credentials." });
+            return res.status(401).json({ error: "AUTH_INVALID_CREDENTIALS" });
         }
 
         const user = users[0];
 
         // Security Check: If they log in via local form but registered via social OAuth, redirect them
         if (user.auth_provider !== 'local') {
-            return res.status(400).json({ error: `This account uses ${user.auth_provider} authentication. Sign in with social instead.` });
+            return res.status(400).json({ error: "AUTH_EMAIL_TAKEN" });
         }
 
         // Compare the submitted password string with the database hash key securely
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) {
-            return res.status(401).json({ error: "Invalid email or password credentials." });
+            return res.status(401).json({ error: "AUTH_INVALID_EMAIL_OR_PASSWORD" });
         }
 
         // Generate the secure JWT token passport stamp
@@ -385,17 +261,17 @@ app.post('/api/auth/login', async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ error: "Login pipeline crashed", details: error.message });
+        res.status(500).json({ error: "INTERNAL_SERVER_ERROR", details: error.message });
     }
 });
 
-// 12. Google OAuth Authentication Endpoint: Verifies OIDC tokens and registers/logs in social profiles
+// Google OAuth Authentication Endpoint: Verifies OIDC tokens and registers/logs in social profiles
 app.post('/api/auth/google', async (req, res) => {
     try {
         const { idToken } = req.body;
 
         if (!idToken) {
-            return res.status(400).json({ error: "Missing required Google ID Token credential payload." });
+            return res.status(400).json({ error: "MISSING_GOOGLE_ID" });
         }
 
         // 1. Validate the token signature directly against Google's security servers
@@ -407,34 +283,35 @@ app.post('/api/auth/google', async (req, res) => {
         const payload = ticket.getPayload();
         const { email, name, picture } = payload; // Extract Google user profile metadata safely!
 
-        // 2. Query MySQL to see if this specific social account profile already exists
         const [existingUsers] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
         
         let user;
 
         if (existingUsers.length === 0) {
-            // 3. AUTO-REGISTER: If they are brand new, create their relational account line automatically!
-            // We use a clean text replacement format to turn their full name into a safe, lowercase username
-            const generatedUsername = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.floor(1000 + Math.random() * 9000);
-            
             const [insertResult] = await db.query(
                 `INSERT INTO users (username, email, auth_provider, avatar_url) VALUES (?, ?, 'google', ?)`,
-                [generatedUsername, email, picture]
+                [name, email, picture]
+            );
+
+            await db.query(
+                `INSERT INTO portfolios (user_id, name) VALUES (?, 'New')`,
+                [insertResult.insertId]
             );
 
             user = {
                 id: insertResult.insertId,
-                username: generatedUsername,
+                username: name,
                 email: email,
                 avatar_url: picture
             };
-            console.log(`Successfully generated new Google account profile: ${generatedUsername}`);
+
+            console.log("GOOGLE_ACCOUNT_CREATED" + `|${name}`);
         } else {
             user = existingUsers[0];
             
             // Security check: If they registered locally but tried to use Google social sign-in, manage the overlap safely
             if (user.auth_provider !== 'google') {
-                return res.status(400).json({ error: `This email is already linked via ${user.auth_provider} credentials. Please sign in manually.` });
+                return res.status(400).json({ error: "AUTH_EMAIL_TAKEN" });
             }
         }
 
@@ -457,12 +334,51 @@ app.post('/api/auth/google', async (req, res) => {
 
     } catch (error) {
         console.error("Google OAuth pipeline exception:", error.message);
-        res.status(500).json({ error: "Google verification system failed", details: error.message });
+        res.status(500).json({ error: "GOOGLE_VERIFICATION_FAILED", details: error.message });
     }
 });
+
+async function getAssets(userId, exchange, res) {
+    try {       
+        const params = [userId];
+
+        let sql = `SELECT assets.id, assets.symbol 
+                     FROM watchlists
+                     JOIN portfolios on watchlists.portfolio_id = portfolios.id
+                     JOIN assets ON watchlists.asset_id = assets.id
+                    WHERE portfolios.user_id = ?
+                     `;
+ 
+        if (exchange !== null && exchange !== undefined) {
+            sql += ` AND assets.exchange = ?`;
+            params.push(exchange);
+        }
+
+        const [assets] = await db.query(sql, params);
+
+        if (assets.length === 0) {
+            return res.json({ market: {exchange}, data: [] });
+        }
+
+        for (const asset of assets) {
+            const liveAsset = await yahooFinance.quote(asset.symbol);
+
+            asset.price = liveAsset.regularMarketPrice;
+            asset.price_change = `${liveAsset.regularMarketChangePercent >= 0 ? '+' : ''}${liveAsset.regularMarketChangePercent.toFixed(2)}%`
+
+            await db.query("update assets set price = ?, price_change = ? where id = ?", [asset.price, asset.price_change, asset.id]);
+        }                
+        
+        res.json({ market: {exchange}, data: assets.filter(item => item !== null)  });
+    }
+    catch (error) {
+        console.error(`Error while retrieving stocks for user ${userId}`, error.message);
+        res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
+    }
+}
 
 // Launch server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Unified Full-Stack Yahoo Finance Engine running smoothly on port ${PORT}`);
+    console.log(`Running on port: ${PORT}`);
 });
