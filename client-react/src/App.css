@@ -1,0 +1,32 @@
+.marquee-container {
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  width: 100%;
+  background-color: #090d14; /* Matches your dashboard background */
+  padding: 12px 0;
+  border-bottom: 1px solid #1e222d;
+}
+
+/* Ticker Track - Moves the dual copies seamlessly */
+.marquee-track {
+  display: flex;
+  gap: 10px; /* Uniform spacing between your global asset text blocks */
+  animation: scroll-left-marquee 35s linear infinite; /* Adjusted speed for readability */
+  padding-right: 50px;
+}
+
+/* Pause effect on hover so you can read a value carefully */
+.marquee-container:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* The Infinite Loop Loop Formula */
+@keyframes scroll-left-marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%); /* Resets exactly halfway through the duplicated array */
+  }
+}

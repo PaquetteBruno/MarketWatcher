@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import './App.css';
 import i18n from './i18n.js'
 
 // 📜 PERSONALIZED TRADING TERMINAL ABOUT VIEW & PAYPAL INTEGRATION
@@ -68,7 +69,7 @@ function AboutPageView() {
             <span style={{ fontSize: '12px', color: '#8b949e', fontStyle: 'italic' }}>— or scan to donate on mobile —</span>
             {/* 📱 Relational Local QR Code Anchor Container */}
             <img 
-              src="/public/paypal-qr.png" 
+              src="/images/paypal-qr.png" 
               alt="PayPal Donation QR Code" 
               style={{ 
                 width: '140px', 
@@ -126,13 +127,13 @@ function GoogleAdBanner() {
   );
 }
 
-const LanguageSelector = ({ user, handleSignOut, currentTab, setActiveTab }) => {
+const LanguageSelector =  ({ user, handleSignOut, currentTab, setActiveTab }) => {
   const currentLang = i18n.language || 'en';
   const t = (key) => i18n.t(key);
 
   const handleLangChange = (lng) => {
     i18n.changeLanguage(lng);
-    setActiveTab(activeTab); // Force dynamic layout text update on click
+    setActiveTab(currentTab); // Force dynamic layout text update on click
   };
 
   return (
@@ -210,9 +211,30 @@ const LanguageSelector = ({ user, handleSignOut, currentTab, setActiveTab }) => 
         onMouseLeave={(e) => { if (currentLang !== 'es') e.currentTarget.style.opacity = '0.55'; }}
       />
         <span style={{ fontSize: '13px', color: '#8b949e',marginLeft:'10px', marginTop: '0px' }}>
-          {t('LOG_IN_AS')} <strong style={{color: '#58a6ff'}}>{user?.username || 'Guest'}</strong>            &nbsp;&nbsp;&nbsp;
+          <strong style={{color: '#58a6ff'}}>{user?.username || 'Guest'}</strong>
         </span>
-        <button onClick={handleSignOut} style={{background: 'transparent', color: '#58a6ff', border: '1px solid #58a6ff', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' }}>{t('SIGN_OUT')}</button>
+       <button 
+  onClick={() => {
+    console.log("Sign out proxy initiated.");
+    if (typeof handleSignOut === 'function') {
+      handleSignOut();
+    } else {
+      alert("Error: handleSignOut is not being passed correctly as a function! It is currently: " + typeof handleSignOut);
+    }
+  }} 
+  style={{
+    background: 'transparent', 
+    color: '#58a6ff', 
+    border: '1px solid #58a6ff', 
+    padding: '3px 8px', 
+    borderRadius: '6px', 
+    cursor: 'pointer', 
+    fontSize: '11px', 
+    fontWeight: '600' 
+  }}
+>
+  {t('SIGN_OUT')}
+</button>
       </div>
   );
 };
@@ -395,7 +417,7 @@ function App() {
           user_id: user.id,
           symbol: targetAsset.symbol,
           name: targetAsset.name,
-          exchange: targetAsset.exchange || 'NASDAQGS',
+          asset_type: targetAsset.asset_type || 'NASDAQGS',
           price: targetAsset.price || 0.00,
           price_change: targetAsset.price_change || '0.00%'
         })
@@ -414,7 +436,7 @@ function App() {
       const res = await fetch('http://localhost:5000/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: authUsername, email: authEmail, password: authPassword }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Rejected.');
-      alert(data.message); setIsRegistering(false); setAuthPassword('');
+      setIsRegistering(false); setAuthPassword('');
     } catch (err) { setAuthError(err.message); }
   };
 
@@ -495,32 +517,71 @@ function App() {
     );
   }
 
-  // 📈 MAIN TRADING TERMINAL LAYOUT INTERFACE
   return (
-    
-    <div style={{ backgroundColor: '#0d1117', color: '#c9d1d9', fontFamily: 'sans-serif', minHeight: '100vh', padding: '30px 20px 40px 20px', boxSizing: 'border-box' }}>
-      {globalData.length > 0 && (
-        <div style={{ background: '#161b22', borderBottom: '1px solid #21262d', margin: '0 -20px 30px -20px', padding: '2px 2px', display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: '40px', fontSize: '13px', fontWeight: '600' }}>
-          {globalData.map((global) => {
-            const isPos = global.price_change && global.price_change.startsWith('+');
-            const flStatus = priceFlashing[global.symbol];
-            const mBg = flStatus === 'up' ? 'rgba(63, 185, 80, 0.25)' : flStatus === 'down' ? 'rgba(248, 81, 73, 0.25)' : 'transparent';
-            return (
-              <div key={global.symbol} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: mBg, padding: '4px 8px', borderRadius: '4px', transition: 'background 0.2s' }}>
-                <span style={{ color: '#8b949e' }}>{global.name}:</span>
-                <span style={{ color: flStatus === 'up' ? '#58a6ff' : flStatus === 'down' ? '#ff7b72' : '#ffffff', fontFamily: 'monospace' }}>${parseFloat(global.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                <span style={{ color: isPos ? '#3fb950' : '#f85149', fontFamily: 'monospace' }}>{global.price_change}</span>
-              </div>
-            );
-          })}
+    <div style={{ backgroundColor: '#0d1117', color: '#c9d1d9', fontFamily: 'sans-serif', minHeight: '100vh', padding: '10px 20px 40px 20px', boxSizing: 'border-box' }}>
+      
+      {/* 📦 STEP 1: HEADER CONTAINER SYSTEM (Stops the layout overlap completely) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', margin: '0 -20px 25px -20px' }}>
+
+        {/* TOP PANEL: Language selector & Profile layer sitting naturally in the page flow */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '0 20px' }}>
+          <LanguageSelector 
+            user={user} 
+            handleSignOut={handleSignOut} 
+            currentTab={activeTab} 
+            setActiveTab={setActiveTab} 
+          />
         </div>
-      )}
-      <LanguageSelector 
-        user={user} 
-        handleSignOut={handleSignOut} 
-        currentTab={activeTab} 
-        setActiveTab={setActiveTab} 
-      />
+
+        {/* BOTTOM PANEL: The Infinite Running Marquee Banner */}
+        {globalData.length > 0 && (
+          <div 
+            className="marquee-container" 
+            style={{ 
+              width: '100%', 
+              background: '#161b22', 
+              borderBottom: '1px solid #21262d', 
+              borderTop: '1px solid #21262d', 
+              padding: '0px',
+              marginTop: '10px'
+            }}
+          >
+            <div className="marquee-track">
+              
+              {/* FIRST PASS FOR INFINITE LOOP EFFECT */}
+              {globalData.map((global, index) => {
+                const isPos = global.price_change && global.price_change.startsWith('+');
+                const flStatus = priceFlashing[global.symbol];
+                const mBg = flStatus === 'up' ? 'rgba(63, 185, 80, 0.25)' : flStatus === 'down' ? 'rgba(248, 81, 73, 0.25)' : 'transparent';
+                return (
+                  <div key={`orig-${global.symbol}-${index}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: mBg, padding: '4px 8px', borderRadius: '4px', transition: 'background 0.2s', fontSize: '13px', fontWeight: '600' }}>
+                    <span style={{ color: '#8b949e' }}>{global.name}:</span>
+                    <span style={{ color: flStatus === 'up' ? '#58a6ff' : flStatus === 'down' ? '#ff7b72' : '#ffffff', fontFamily: 'monospace' }}>${parseFloat(global.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span style={{ color: isPos ? '#3fb950' : '#f85149', fontFamily: 'monospace' }}>{global.price_change}</span>
+                  </div>
+                );
+              })}
+
+              {/* DUPLICATE PASS FOR SEAMLESS INFINITE LOOP EFFECT */}
+              {globalData.map((global, index) => {
+                const isPos = global.price_change && global.price_change.startsWith('+');
+                const flStatus = priceFlashing[global.symbol];
+                const mBg = flStatus === 'up' ? 'rgba(63, 185, 80, 0.25)' : flStatus === 'down' ? 'rgba(248, 81, 73, 0.25)' : 'transparent';
+                return (
+                  <div key={`dup-${global.symbol}-${index}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: mBg, padding: '4px 8px', borderRadius: '4px', transition: 'background 0.2s', fontSize: '13px', fontWeight: '600' }}>
+                    <span style={{ color: '#8b949e' }}>{global.name}:</span>
+                    <span style={{ color: flStatus === 'up' ? '#58a6ff' : flStatus === 'down' ? '#ff7b72' : '#ffffff', fontFamily: 'monospace' }}>${parseFloat(global.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span style={{ color: isPos ? '#3fb950' : '#f85149', fontFamily: 'monospace' }}>{global.price_change}</span>
+                  </div>
+                );
+              })}
+
+            </div>
+          </div>
+        )}
+
+      </div>
+
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         
         <header style={{ marginBottom: '10px', borderBottom: '1px solid #21262d', paddingBottom: '0px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -576,7 +637,7 @@ function App() {
                       <span style={{ color: '#8b949e', fontSize: '13px' }}>— {asset.name}</span>
                     </div>
                     <span style={{ fontSize: '11px', background: '#30363d', color: '#58a6ff', padding: '3px 8px', borderRadius: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                      {asset.exchange}
+                      {asset.asset_type}
                     </span>
                   </div>
                 ))}
@@ -606,7 +667,7 @@ function App() {
                   <tr style={{ borderBottom: '1px solid #30363d', color: '#8b949e', fontSize: '13px' }}>
                     <th style={{ padding: '12px 12px', width: '15%' }}>SYMBOL</th>
                     <th style={{ padding: '12px 12px', width: '35%' }}>NAME</th>
-                    <th style={{ padding: '12px 12px', width: '20%' }}>EXCHANGE</th>
+                    <th style={{ padding: '12px 12px', width: '20%' }}>TYPE</th>
                     <th style={{ padding: '12px 12px', width: '15%' }}>PRICE</th>
                     <th style={{ padding: '12px 12px', width: '10%', textAlign: 'right' }}>CHANGE</th>
                     <th style={{ padding: '12px 12px', width: '5%' }}></th>
@@ -621,7 +682,7 @@ function App() {
                       <tr key={asset.symbol} style={{ borderBottom: '1px solid #21262d',  fontSize: '14px', background: rBg, transition: 'background 0.2s' }}>
                         <td style={{ ...cellStyle, padding: '6px 12px', fontWeight: '500', color: '#ffffff' }}>{asset.symbol}</td>
                         <td style={{ ...cellStyle, padding: '6px 12px', color: '#c9d1d9' }} title={asset.name}>{asset.name}</td>
-                        <td style={{ ...cellStyle, padding: '6px 12px', color: '#8b949e', fontSize: '12px', textTransform: 'uppercase' }}>{asset.exchange || activeTab}</td>
+                        <td style={{ ...cellStyle, padding: '6px 12px', color: '#8b949e', fontSize: '12px', textTransform: 'uppercase' }}>{asset.asset_type || activeTab}</td>
                         <td style={{ ...cellStyle, padding: '6px 12px', color: flStatus === 'up' ? '#58a6ff' : flStatus === 'down' ? '#ff7b72' : '#ffffff', fontFamily: 'monospace' }}>${parseFloat(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                         <td style={{ ...cellStyle, padding: '6px 12px', color: isPos ? '#3fb950' : '#f85149', fontWeight: '700', fontFamily: 'monospace', textAlign: 'right' }}>{asset.price_change}</td>
                         <td style={{ padding: '6px 12px', textAlign: 'center' }}><button onClick={() => handleRemoveFromWatchlist(asset.symbol)} style={{ background: 'transparent', color: '#8b949e', border: 'none', cursor: 'pointer', padding: 0 }} title="Remove">🗑️</button></td>

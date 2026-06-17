@@ -64,25 +64,13 @@ app.get('/api/markets/crypto', authenticateToken, async (req, res) => {
 
 app.get('/api/markets/global', async (req, res) => {
     try {
-
-        const [globals] = await db.query("SELECT id, symbol, name, price, price_change FROM globals");
-
-        for (const global of globals) {
-            const liveGlobal = await yahooFinance.quote(global.symbol);
-
-            global.price = liveGlobal.regularMarketPrice;
-            global.price_change = `${liveGlobal.regularMarketChangePercent >= 0 ? '+' : ''}${liveGlobal.regularMarketChangePercent.toFixed(2)}%`
-
-            await db.query(
-                "update globals set price = ?, price_change = ? where id = ?",
-                [global.price, global.price_change, global.id]
-            );
-        }
-
-        res.json({ market: 'global', data: globals.filter(item => item !== null)  });
-
+        // The API route now only reads directly from your fast MySQL memory!
+        const [globals] = await db.query(
+            "SELECT id, symbol, name, price, price_change FROM globals WHERE show_on_banner = 1"
+        );
+        res.json({ market: "global", data: globals });
     } catch (error) {
-        console.error("Error while retrieving global data", error.message);
+        console.error("Error retrieving market banner data:", error.message);
         res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
     }
 });
@@ -109,7 +97,7 @@ app.get('/api/search', async (req, res) => {
                 return {
                     symbol: item.symbol,
                     name: item.shortname || item.longname || item.symbol,
-                    exchange: isCrypto ? 'CRYPTO' : (item.exchange === 'NMS' ? 'NASDAQGS' : item.exchange)
+                    asset_type: isCrypto ? 'CRYPTO' : (item.asset_type === 'NMS' ? 'NASDAQGS' : item.asset_type)
 /*                     price: item.regularMarketPrice,
                     price_change: `${item.regularMarketChangePercent >= 0 ? '+' : ''}${item.regularMarketChangePercent.toFixed(2)}%` */
                 };
@@ -123,44 +111,64 @@ app.get('/api/search', async (req, res) => {
 });
 
 app.post('/api/watchlist/add', async (req, res) => {
-    try {
-        const liveGlobal = await yahooFinance.quote(req.body.symbol);
+  try {
+    const { symbol, user_id } = req.body;
+    
+    // 1. Fetch live data and format our inputs cleanly up front
+    const liveGlobal = await yahooFinance.quote(symbol);
+    const symbolUpper = symbol.toUpperCase();
+    const asset_typeUpper = req.body.asset_type ? req.body.asset_type.toUpperCase() : 'UNKNOWN';
 
-        let assetId;
-        const [asset] = await db.query(`SELECT id, symbol FROM Assets where symbol = ?`, [liveGlobal.symbol.toUpperCase()]);
+    // Calculate price change string outside of the query payload
+    const pct = liveGlobal.regularMarketChangePercent;
+    const priceChangeStr = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
 
-        if (asset.length === 0) {
-            const [result] = await db.query(
-                "INSERT INTO Assets (symbol, name, exchange, price, price_change) VALUES (?, ?, ?, ?, ?)",
-                [
-                    req.body.symbol.toUpperCase(), 
-                    liveGlobal.shortName, 
-                    req.body.exchange.toUpperCase(), 
-                    liveGlobal.regularMarketPrice, 
-                    `${liveGlobal.regularMarketChangePercent >= 0 ? '+' : ''}${liveGlobal.regularMarketChangePercent.toFixed(2)}%`
-                ]
-            );
+    let assetId;
+    let portfolio_asset_id;
+    
+    // 2. Check if the asset already exists in our master Assets table
+    const [assets] = await db.query('SELECT id FROM Assets WHERE symbol = ?', [symbolUpper]);
 
-            assetId = result.insertId;
-        }
-        else {
-            assetId = asset[0].id;
-        }
-
-        const [portfolio] = await db.query("SELECT id from portfolios where user_id = ?", [req.body.user_id])
-
-        await db.query(
-            "INSERT INTO watchlists (asset_id, portfolio_id) VALUES (?, ?)",
-            [
-                assetId,
-                portfolio[0].id                
-            ]
-        );
-
-        res.json({ message: "ASSET_SUCCESSFULLY_ADDED" });
-    } catch (error) {
-        res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
+    if (assets.length === 0) {
+      // Create asset if it doesn't exist
+      const [insertResult] = await db.query(
+        "INSERT INTO Assets (symbol, name, asset_type, price, price_change) VALUES (?, ?, ?, ?, ?)",
+        [symbolUpper, liveGlobal.shortName, asset_typeUpper, liveGlobal.regularMarketPrice, priceChangeStr]
+      );
+      assetId = insertResult.insertId;
+    } else {
+      // Use existing asset ID
+      assetId = assets[0].id;
     }
+
+    // 3. Securely look up the user's portfolio ID
+    const [portfolios] = await db.query("SELECT id FROM portfolios WHERE user_id = ?", [user_id]);
+
+    // Safety guard: If no portfolio exists, create one or throw a clear error
+    if (portfolios.length === 0) {
+      return res.status(404).json({ error: "PORTFOLIO_NOT_FOUND", details: "User does not have an active portfolio space." });
+    }
+    const portfolioId = portfolios[0].id;
+
+    const [portfolio_assetResult] = await db.query(
+        "INSERT INTO portfolio_asset (portfolio_id, asset_id) VALUES (?, ?)",
+        [portfolioId, assetId]
+      );
+
+      portfolio_asset_id = [portfolio_assetResult][0].insertId;
+
+    // 4. Link the asset to the user's watchlist portfolio
+    await db.query(
+      "INSERT INTO watchlists (portfolio_asset_id) VALUES (?)",
+      [portfolio_asset_id]
+    );
+
+    res.json({ message: "ASSET_SUCCESSFULLY_ADDED" });
+
+  } catch (error) {
+    console.error("Watchlist error detailed logs:", error);
+    res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
+  }
 });
 
 app.delete('/api/watchlist/remove', async (req, res) => {
@@ -179,6 +187,94 @@ app.delete('/api/watchlist/remove', async (req, res) => {
 
         res.json({ message: "ASSET_SUCCESSFULLY_REMOVED" + `|[${symbol}]` });
     } catch (error) {
+        res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
+    }
+});
+
+app.post('/api/portfolio/add-position', async (req, res) => {
+    try {
+        const { portfolio_asset_id, quantity, purchase_price } = req.body;
+
+        // Enforce that values default cleanly to avoid SQL calculation errors
+        const qty = quantity || 0;
+        const price = purchase_price || 0.00;
+
+        // Inserts a standalone position block allowing the multi-lot tracking you wanted
+        await db.query(
+            "INSERT INTO positions (portfolio_asset_id, quantity, purchase_price) VALUES (?, ?, ?)",
+            [portfolio_asset_id, qty, price]
+        );
+
+        res.json({ message: "POSITION_RECORDED_SUCCESSFULLY" });
+    } catch (error) {
+        console.error("Error creating stock position lot:", error.message);
+        res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
+    }
+});
+
+app.post('/api/portfolio/add-asset', async (req, res) => {
+    try {
+        const { user_id, symbol, name, asset_type, price, price_change } = req.body;
+        const assetSymbolUpper = symbol.toUpperCase();
+
+        // Step 1: Ensure asset exists in our main assets directory
+        let [assetsRows] = await db.query("SELECT id FROM assets WHERE symbol = ?", [assetSymbolUpper]);
+        let assetId;
+
+        if (assetsRows.length === 0) {
+            // First time anyone has added this asset globally
+            const [insertAsset] = await db.query(
+                "INSERT INTO assets (symbol, name, asset_type, price, price_change) VALUES (?, ?, ?, ?, ?, ?)",
+                [assetSymbolUpper, name, asset_type, price, price_change] // Default global_id to 1 or adjust as needed
+            );
+            assetId = insertAsset.insertId;
+        } else {
+            assetId = assetsRows[0].id;
+        }
+
+        // Step 2: Find the user's active portfolio (NEW JOIN LOGIC)
+        // We look directly into portfolios where user_id matches
+        let [portfolioRows] = await db.query("SELECT id FROM portfolios WHERE user_id = ?", [user_id]);
+        let portfolioId;
+
+        if (portfolioRows.length === 0) {
+            // Safe fallback: If user doesn't have an active portfolio entry yet, create one
+            const [insertPortfolio] = await db.query(
+                "INSERT INTO portfolios (user_id, name) VALUES (?, 'My First Portfolio')",
+                [user_id]
+            );
+            portfolioId = insertPortfolio.insertId;
+        } else {
+            portfolioId = portfolioRows[0].id;
+        }
+
+        // Step 3: Link the asset to the portfolio inside portfolio_asset
+        // The UNIQUE constraint we added ensures they can't duplicate the link
+        let [existingLink] = await db.query(
+            "SELECT id FROM portfolio_asset WHERE portfolio_id = ? AND asset_id = ?",
+            [portfolioId, assetId]
+        );
+
+        let portfolioAssetId;
+        if (existingLink.length === 0) {
+            const [insertLink] = await db.query(
+                "INSERT INTO portfolio_asset (portfolio_id, asset_id) VALUES (?, ?)",
+                [portfolioId, assetId]
+            );
+            portfolioAssetId = insertLink.insertId;
+        } else {
+            portfolioAssetId = existingLink[0].id;
+        }
+
+        // Optional Step 4: If this action came from your Watchlist view, map it to the watchlists table
+        await db.query(
+            "INSERT IGNORE INTO watchlists (portfolio_asset_id) VALUES (?)",
+            [portfolioAssetId]
+        );
+
+        res.json({ message: "ASSET_SUCCESSFULLY_ADDED", portfolioAssetId });
+    } catch (error) {
+        console.error("Error in add-asset route:", error.message);
         res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
     }
 });
@@ -338,44 +434,109 @@ app.post('/api/auth/google', async (req, res) => {
     }
 });
 
-async function getAssets(userId, exchange, res) {
+// Helper to fetch live market benchmark data and sync to MySQL
+async function updateGlobalPrices() {
+    try {
+        // Query symbols designated for the marquee banner layout
+        const [rows] = await db.query("SELECT symbol FROM globals WHERE show_on_banner = 1");
+        
+        if (rows.length === 0) return;
+
+        const symbols = rows.map(r => r.symbol);
+
+        // Fetch metrics concurrently using yahoo-finance2
+        const quotes = await yahooFinance.quote(symbols);
+
+        // Map responses for fast, resilient lookups
+        const quoteMap = {};
+        if (Array.isArray(quotes)) {
+            quotes.forEach(q => { if (q?.symbol) quoteMap[q.symbol.toLowerCase()] = q; });
+        } else if (quotes?.symbol) {
+            quoteMap[quotes.symbol.toLowerCase()] = quotes;
+        }
+
+        // Cycle elements and safely synchronize database states
+        for (const symbol of symbols) {
+            const liveData = quoteMap[symbol.toLowerCase()];
+            if (!liveData) continue;
+
+            const price = liveData.regularMarketPrice || 0;
+            const changePercent = liveData.regularMarketChangePercent || 0;
+
+            // Generate clean frontend-friendly structural string indicators (+X.XX% / -X.XX%)
+            const sign = changePercent >= 0 ? "+" : "";
+            const price_change = `${sign}${changePercent.toFixed(2)}%`;
+
+            await db.query(
+                "UPDATE globals SET price = ?, price_change = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?",
+                [price, price_change, symbol]
+            );
+        }
+        console.log(`[${new Date().toLocaleTimeString()}] Global ticker benchmarks synced successfully.`);
+    } catch (error) {
+        console.error("Cron worker error fetching Yahoo Finance symbols:", error.message);
+    }
+}
+
+async function getAssets(userId, asset_type, res) {
     try {       
         const params = [userId];
 
+        // Paths fixed to leverage your streamlined portfolio_asset bridge table
         let sql = `SELECT assets.id, assets.symbol 
                      FROM watchlists
-                     JOIN portfolios on watchlists.portfolio_id = portfolios.id
-                     JOIN assets ON watchlists.asset_id = assets.id
-                    WHERE portfolios.user_id = ?
-                     `;
+                     JOIN portfolio_asset ON watchlists.portfolio_asset_id = portfolio_asset.id
+                     JOIN portfolios ON portfolio_asset.portfolio_id = portfolios.id
+                     JOIN assets ON portfolio_asset.asset_id = assets.id
+                    WHERE portfolios.user_id = ?`;
  
-        if (exchange !== null && exchange !== undefined) {
-            sql += ` AND assets.exchange = ?`;
-            params.push(exchange);
+        if (asset_type !== null && asset_type !== undefined) {
+            sql += ` AND assets.asset_type = ?`;
+            params.push(asset_type);
         }
 
         const [assets] = await db.query(sql, params);
 
         if (assets.length === 0) {
-            return res.json({ market: {exchange}, data: [] });
+            return res.json({ market: asset_type, data: [] });
         }
 
+        // Loop over the tracked assets to grab live data snapshots
         for (const asset of assets) {
-            const liveAsset = await yahooFinance.quote(asset.symbol);
+            try {
+                const liveAsset = await yahooFinance.quote(asset.symbol);
+                
+                if (liveAsset) {
+                    asset.price = liveAsset.regularMarketPrice || 0;
+                    const changePercent = liveAsset.regularMarketChangePercent || 0;
+                    asset.price_change = `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`;
 
-            asset.price = liveAsset.regularMarketPrice;
-            asset.price_change = `${liveAsset.regularMarketChangePercent >= 0 ? '+' : ''}${liveAsset.regularMarketChangePercent.toFixed(2)}%`
-
-            await db.query("update assets set price = ?, price_change = ? where id = ?", [asset.price, asset.price_change, asset.id]);
+                    // Push updates down to database core
+                    await db.query(
+                        "UPDATE assets SET price = ?, price_change = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", 
+                        [asset.price, asset.price_change, asset.id]
+                    );
+                }
+            } catch (yahooErr) {
+                // Safeguard: If a single asset fails or has an invalid symbol, don't crash the whole route
+                console.error(`Skipping live sync for symbol ${asset.symbol}:`, yahooErr.message);
+            }
         }                
         
-        res.json({ market: {exchange}, data: assets.filter(item => item !== null)  });
+        res.json({ market: asset_type, data: assets });
     }
     catch (error) {
         console.error(`Error while retrieving stocks for user ${userId}`, error.message);
         res.status(500).json({ error: "DB_CONNECTION_ERROR", details: error.message });
     }
 }
+
+setInterval(() => {
+    updateGlobalPrices();
+}, 300000);
+
+// Run a manual boot-sync once right when your Node.js engine boots up
+updateGlobalPrices();
 
 // Launch server
 const PORT = process.env.PORT || 5000;
