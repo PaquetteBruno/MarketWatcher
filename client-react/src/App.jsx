@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css';
 import i18n from './i18n.js'
 
@@ -241,8 +241,13 @@ const LanguageSelector =  ({ user, handleSignOut, currentTab, setActiveTab }) =>
 
 function App() {
   const t = (key) => i18n.t(key);
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(() => {
+      const saved = localStorage.getItem('mw_user');
+      return saved ? JSON.parse(saved) : null;
+  });
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('mw_token') || null;
+});
   const [isRegistering, setIsRegistering] = useState(false);
   const [authUsername, setAuthUsername] = useState('');
   const [authEmail, setAuthEmail] = useState('');
@@ -266,22 +271,15 @@ function App() {
   const prevglobalPricesRef = useRef({});
   const timerRef = useRef(null);
 
-  const changeLanguage = (lng) => {
+/*   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
-  };
+  }; */
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('mw_token');
-    const savedUser = localStorage.getItem('mw_user');
-
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
 
     const initGoogle = () => {
-      if (window.google && (!savedToken || !savedUser)) {
-        google.accounts.id.initialize({
+      if (window.google && (!token || !user)) {
+          window.google.accounts.id.initialize({
           client_id: "607204517221-liol36qcu1b51u42a69gid0fthokfvvc.apps.googleusercontent.com",
           callback: async (resObj) => {
             setAuthError('');
@@ -300,7 +298,7 @@ function App() {
             } catch (err) { setAuthError(err.message); }
           }
         });
-        google.accounts.id.renderButton(document.getElementById("googleBtnAnchor"), { theme: "outline", size: "large", width: "340" });
+        window.google.accounts.id.renderButton(document.getElementById("googleBtnAnchor"), { theme: "outline", size: "large", width: "340" });
       }
     };
     if (window.google) {
@@ -309,18 +307,20 @@ function App() {
     else { 
       window.addEventListener('load', initGoogle); return () => window.removeEventListener('load', initGoogle); 
     }
-  }, [token]);
+  }, [user, token]);
 
-  const fetchMarketData = async () => {
+  const fetchMarketData = useCallback(async () => {
+  
     if (!user || !token || activeTab === 'about') return;
 
     try {
-      const endpoint = activeTab === 'portfolio' ? `http://localhost:5000/api/watchlist/user/${user.id}` : `http://localhost:5000/api/markets/${activeTab}`;
+    
+      const endpoint = `http://localhost:5000/api/portfolio/${user.portfolioId}`;
       const response = await fetch(endpoint, { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } });
       const json = await response.json();
       const nextMarketData = json.data || [];
 
-      const globalResponse = await fetch('http://localhost:5000/api/markets/global', { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } });
+      const globalResponse = await fetch('http://localhost:5000/api/global', { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } });
       const globalJson = await globalResponse.json();
       const nextglobalData = globalJson.data || [];
 
@@ -352,29 +352,34 @@ function App() {
     } catch (error) { 
       setDebugLog(`Refresh Failure: ${error.message}`); 
     }
-  };
+  }, [user, activeTab, token,  priceFlashing]);
 
   useEffect(() => {
     if (!user || !token) return;
 
-    fetchMarketData();
-    setCountdown(refreshInterval);
+    // Move the initial fetch inside an asynchronous immediate execution block
+    const initFetch = async () => {
+        await fetchMarketData();
+        setCountdown(refreshInterval);
+    };
+    initFetch();
 
     if (timerRef.current) clearInterval(timerRef.current);
 
     timerRef.current = setInterval(() => {
-      setCountdown((prevCount) => {
-        if (prevCount <= 1) {
-          fetchMarketData(); 
-          return refreshInterval; 
-        }
-        return prevCount - 1;
-      });
+        setCountdown((prevCount) => {
+            if (prevCount <= 1) {
+                fetchMarketData();
+                return refreshInterval;
+            }
+            return prevCount - 1;
+        });
     }, 1000);
-    
+
     return () => clearInterval(timerRef.current);
 
-  }, [activeTab, user, token, refreshInterval]);
+}, [user, token, refreshInterval, fetchMarketData]);
+
 
   const handleInputChange = async (text) => {
     setSearchQuery(text);

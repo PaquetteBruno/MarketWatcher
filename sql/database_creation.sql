@@ -13,18 +13,6 @@ create table if not exists users (
     updated_at timestamp default current_timestamp on update current_timestamp
 );
 
-create table if not exists globals (
-    id int auto_increment primary key,
-    symbol varchar(15) not null unique,
-    name varchar(100) not null,
-    category varchar(20) not null,
-    price decimal(12 , 4 ) not null,
-    price_change varchar(10) not null,
-    show_on_banner bit default 0,
-    created_at timestamp default current_timestamp,
-    updated_at timestamp default current_timestamp on update current_timestamp
-);
-
 create table if not exists assets (
     id int auto_increment primary key,
     symbol varchar(15) not null unique, -- Added unique to ensure one entry per asset globally
@@ -55,13 +43,6 @@ create table if not exists portfolio_asset (
     unique key unique_portfolio_asset (portfolio_id, asset_id) -- Prevents adding same asset twice to one portfolio
 );
 
-create table if not exists watchlists (
-    id int auto_increment primary key,
-    portfolio_asset_id int not null unique, -- One watch entry per portfolio asset
-    created_at timestamp default current_timestamp,
-    foreign key (portfolio_asset_id) references portfolio_asset (id) on delete cascade
-);
-
 create table if not exists positions (
 	id int auto_increment primary key,
     portfolio_asset_id int not null,
@@ -69,6 +50,18 @@ create table if not exists positions (
     purchase_price decimal (10, 2) not null default 0.00, -- Added missing purchase price field
     created_at timestamp default current_timestamp,
     foreign key (portfolio_asset_id) references portfolio_asset (id) on delete cascade
+);
+
+create table if not exists globals (
+    id int auto_increment primary key,
+    symbol varchar(15) not null unique,
+    name varchar(100) not null,
+    category varchar(20) not null,
+    price decimal(12 , 4 ) not null,
+    price_change varchar(10) not null,
+    show_on_banner bit default 0,
+    created_at timestamp default current_timestamp,
+    updated_at timestamp default current_timestamp on update current_timestamp
 );
 
 insert into globals (symbol, name, category, price, price_change, show_on_banner) 
@@ -99,6 +92,6 @@ values
 ('gc=f', 'gold', 'commodity', 0, '+0.00%', 1),
 ('cl=f', 'crude oil wti', 'commodity', 0, '+0.00%', 1),
 ('dx-y.nyb', 'us dollar index', 'forex', 0, '+0.00%', 1),
-('uscad=x', 'usd/cad', 'forex', 0, '+0.00%', 1),
+('usdcad=x', 'usd/cad', 'forex', 0, '+0.00%', 1),
 ('eurusd=x', 'eur/usd', 'forex', 0, '+0.00%', 1);
 
