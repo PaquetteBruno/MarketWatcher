@@ -17,8 +17,8 @@ create table if not exists assets (
     id int auto_increment primary key,
     symbol varchar(15) not null unique, -- Added unique to ensure one entry per asset globally
     name varchar(200) not null,
-    asset_type varchar(10) not null,    
-    price decimal(10 , 2 ) not null,
+    type varchar(100) not null,    
+    price decimal(36, 18) not null,
     price_change varchar(10) not null,
     created_at timestamp default current_timestamp,
     updated_at timestamp default current_timestamp on update current_timestamp
@@ -50,6 +50,13 @@ create table if not exists positions (
     purchase_price decimal (10, 2) not null default 0.00, -- Added missing purchase price field
     created_at timestamp default current_timestamp,
     foreign key (portfolio_asset_id) references portfolio_asset (id) on delete cascade
+);
+
+create table if not exists query_log (
+	id int auto_increment primary key,
+    query_text varchar(5000) not null,
+    query_params varchar(500) null,
+    created_at timestamp default current_timestamp
 );
 
 create table if not exists globals (

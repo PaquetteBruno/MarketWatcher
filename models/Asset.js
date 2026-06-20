@@ -2,17 +2,17 @@ import db from '../config/db.js';
 
 class Asset {
     // CREATE: Insert a brand new asset profile globally into our directory
-    static async create({ globalId, symbol, name, exchange, price, priceChange }) {
-        const sql = `INSERT INTO assets (global_id, symbol, name, exchange, price, price_change) 
-                     VALUES (?, ?, ?, ?, ?, ?)`;
+    static async create({ symbol, name, type, price, price_change }) {
+        const sql = `INSERT INTO assets (symbol, name, type, price, price_change) 
+                     VALUES (?, ?, ?, ?, ?)`;
         const [result] = await db.query(sql, [
-            globalId || 1, 
             symbol.toUpperCase(), 
             name, 
-            exchange, 
+            type, 
             price || 0.00, 
-            priceChange || '+0.00%'
+            price_change || '+0.00%'
         ]);
+
         return result.insertId;
     }
 
@@ -25,7 +25,7 @@ class Asset {
 
     // READ: Fetch details for a specific asset ID
     static async findById(id) {
-        const sql = `SELECT id, global_id, symbol, name, exchange, price, price_change, updated_at 
+        const sql = `SELECT id, symbol, name, type, price, price_change, updated_at 
                      FROM assets 
                      WHERE id = ?`;
         const [rows] = await db.query(sql, [id]);

@@ -139,8 +139,7 @@ export const googleLoginUser = async (req, res) => {
             const userId = await User.create({
                 username: generatedUsername,
                 email: email,
-                password: randomPasswordPlaceholder,
-                po
+                password: randomPasswordPlaceholder
             });
 
             user = await User.findById(userId);

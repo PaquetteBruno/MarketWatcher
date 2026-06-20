@@ -1,31 +1,42 @@
 import db from '../config/db.js';
 
 class User {
-    // CREATE: Register a new user and auto-provision their default portfolio container
-    static async create({ username, email, password }) {
-        // Enforce a managed database transaction to guarantee atomic execution
-        const connection = await db.getConnection();
-        try {
-            await connection.beginTransaction();
 
-            // 1. Insert user registry payload record
-            const userSql = `INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)`;
-            const [userResult] = await connection.query(userSql, [username, email, password]);
-            const userId = userResult.insertId;
+  // CREATE: Register a new user and auto-provision their default portfolio container
+  static async create({ username, email, password }) {
+    let connection; // Declare variable outer scope so finally block can see it
 
-            // 2. Automate creation of their first standard tracking layout envelope
-            const portfolioSql = `INSERT INTO portfolios (user_id, name) VALUES (?, 'Default Portfolio')`;
-            await connection.query(portfolioSql, [userId]);
+    try {
+      connection = await db.getConnection(); // Now safely caught if it fails
+      await connection.beginTransaction();
 
-            await connection.commit();
-            return userId;
-        } catch (error) {
-            await connection.rollback();
-            throw error;
-        } finally {
-            connection.release();
-        }
+      // 1. Insert user registry payload record
+      const userSql = "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)";
+      const [userResult] = await connection.query(userSql, [username, email, password]);
+      const userId = userResult.insertId;
+
+      // 2. Automate creation of their first standard tracking layout envelope
+      const portfolioSql = "INSERT INTO portfolios (user_id, name) VALUES (?, 'Default Portfolio')";
+      await connection.query(portfolioSql, [userId]);
+
+      await connection.commit();
+      return userId;
+
+    } catch (error) {
+      // Only attempt rollback if the connection was actually established
+      if (connection) {
+        await connection.rollback();
+      }
+      throw error; // Pass error to controller so frontend gets a 500 response
+    } finally {
+      // Only release if the connection exists
+      if (connection) {
+        connection.release();
+      }
     }
+  }
+
+    
 
     // READ: Look up a user profile object using their unique email parameter pointer
     static async findByEmail(email) {
