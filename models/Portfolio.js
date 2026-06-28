@@ -3,7 +3,7 @@ import db from "../config/db.js";
 class Portfolio {
   // READ: Find the core portfolio ID belonging to a specific user_id
   static async findIdByUserId(userId) {
-    const sql = `SELECT id FROM portfolios WHERE user_id = ? AND selected = 1`;
+    const sql = `SELECT id, name FROM portfolios WHERE user_id = ? AND selected = 1`;
     const [rows] = await db.query(sql, [userId]);
     return rows.length > 0 ? rows[0].id : null;
   }
@@ -17,7 +17,7 @@ class Portfolio {
 
   // READ: Check if an asset is already linked to a portfolio inside your bridge table
   static async findLink(portfolioId, assetId) {
-    const sql = `SELECT id FROM portfolio_asset 
+    const sql = `SELECT id, name FROM portfolio_asset 
                      WHERE portfolio_id = ? AND asset_id = ? 
                      LIMIT 1`;
     const [rows] = await db.query(sql, [portfolioId, assetId]);
@@ -32,7 +32,7 @@ class Portfolio {
   }
 
   static async findSelectedByUserId(userId) {
-    const sql = `SELECT id from portfolios where user_id = ? AND selected = 1`;
+    const sql = `SELECT id, name from portfolios where user_id = ? AND selected = 1`;
     const [rows] = await db.query(sql, [userId]);
     return rows.length > 0 ? rows[0] : null;
   }

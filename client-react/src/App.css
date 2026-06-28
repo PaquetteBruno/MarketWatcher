@@ -1,3 +1,13 @@
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background: #0d1117; /* your dark color */
+}
+
 .marquee-container {
   overflow: hidden;
   white-space: nowrap;
@@ -27,6 +37,8 @@
     transform: translateX(0%);
   }
   100% {
-    transform: translateX(-50%); /* Resets exactly halfway through the duplicated array */
+    transform: translateX(
+      -50%
+    ); /* Resets exactly halfway through the duplicated array */
   }
 }

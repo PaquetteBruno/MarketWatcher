@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import i18n from "./i18n.js";
+import GlobalTicker from "./components/GlobalTicker/GlobalTicker";
 
 // 📜 PERSONALIZED TRADING TERMINAL ABOUT VIEW & PAYPAL INTEGRATION
 function AboutPageView() {
@@ -639,6 +640,7 @@ function App() {
     textOverflow: "ellipsis",
   };
 
+  // REGISTRATION SECTION
   if (!token || !user) {
     return (
       <div
@@ -857,506 +859,442 @@ function App() {
           />
         </div>
 
-        {/* BOTTOM PANEL: The Infinite Running Marquee Banner */}
-        {globalData.length > 0 && (
-          <div
-            className="marquee-container"
-            style={{
-              width: "100%",
-              background: "#161b22",
-              borderBottom: "1px solid #21262d",
-              borderTop: "1px solid #21262d",
-              padding: "0px",
-              marginTop: "10px",
-            }}
-          >
-            <div className="marquee-track">
-              {/* FIRST PASS FOR INFINITE LOOP EFFECT */}
-              {globalData.map((global, index) => {
-                const isPos =
-                  global.price_change && !global.price_change.startsWith("-");
-                //const flStatus = priceFlashing[global.symbol];
-                const mBg = "transparent";
-                return (
-                  <div
-                    key={`orig-${global.symbol}-${index}`}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      background: mBg,
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      transition: "background 0.2s",
-                      fontSize: "13px",
-                      fontWeight: "600",
-                    }}
-                  >
-                    <span style={{ color: "#8b949e" }}>{global.name}:</span>
-                    <span style={{ color: "#ffffff", fontFamily: "monospace" }}>
-                      $
-                      {parseFloat(global.price || 0).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                    <span
-                      style={{
-                        color: isPos ? "#3fb950" : "#f85149",
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      {global.price_change}
-                    </span>
-                  </div>
-                );
-              })}
-
-              {/* DUPLICATE PASS FOR SEAMLESS INFINITE LOOP EFFECT */}
-              {globalData.map((global, index) => {
-                const isPos =
-                  global.price_change && !global.price_change.startsWith("-");
-                const mBg = "transparent";
-                return (
-                  <div
-                    key={`dup-${global.symbol}-${index}`}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      background: mBg,
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      transition: "background 0.2s",
-                      fontSize: "13px",
-                      fontWeight: "600",
-                    }}
-                  >
-                    <span style={{ color: "#8b949e" }}>{global.name}:</span>
-                    <span style={{ color: "#ffffff", fontFamily: "monospace" }}>
-                      $
-                      {parseFloat(global.price || 0).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                    <span
-                      style={{
-                        color: isPos ? "#3fb950" : "#f85149",
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      {global.price_change}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <GlobalTicker globalData={globalData} />
       </div>
-
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-        <header
-          style={{
-            marginBottom: "10px",
-            borderBottom: "1px solid #21262d",
-            paddingBottom: "0px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                color: "#ffffff",
-                margin: "0 0 5px 0",
-                fontSize: "24px",
-              }}
-            >
-              📈 {t("TITLE")}
-            </h1>
-          </div>
-          <div
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          gap: "20px",
+          padding: "20px",
+          boxSizing: "border-box",
+        }}
+      >
+        <div style={{ flex: 1, maxWidth: "60%", margin: "0 auto" }}>
+          <header
             style={{
+              marginBottom: "10px",
+              borderBottom: "1px solid #21262d",
+              paddingBottom: "0px",
               display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-end",
-              gap: "10px",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            <button
-              onClick={() => fetchMarketData()}
-              style={{
-                background: "transparent",
-                color: "#58a6ff",
-                border: "1px solid #58a6ff",
-                padding: "3px 8px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "11px",
-                fontWeight: "600",
-              }}
-            >
-              {t("Refresh")}
-            </button>
-          </div>
-        </header>
-
-        {/* 🔍 SEARCH ASSETS CONTAINER */}
-        <div
-          style={{
-            background: "#161b22",
-            border: "1px solid #21262d",
-            padding: "10px",
-            borderRadius: "8px",
-            marginBottom: "10px",
-            position: "relative",
-          }}
-        >
-          <div style={{ position: "relative", width: "100%" }}>
-            <input
-              type="text"
-              placeholder={t("SEARCH_PLACEHOLDER")}
-              value={searchQuery}
-              onChange={(e) => handleInputChange(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: "#010409",
-                color: "#fff",
-                border: "1px solid #21262d",
-                borderRadius: "6px",
-                boxSizing: "border-box",
-                fontSize: "14px",
-              }}
-            />
-
-            {/* Dynamic Autocomplete Options Box */}
-            {searchResultsArray.length > 0 && (
-              <div
+            <div>
+              <h1
                 style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  background: "#161b22",
-                  border: "1px solid #30363d",
-                  borderRadius: "6px",
-                  marginTop: "5px",
-                  zIndex: 10,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-                  overflow: "hidden",
+                  color: "#ffffff",
+                  margin: "0 0 5px 0",
+                  fontSize: "24px",
                 }}
               >
-                {searchResultsArray.map((asset) => (
-                  <div
-                    key={asset.symbol}
-                    onClick={() => handleSelectAsset(asset, user)}
-                    style={{
-                      padding: "12px 16px",
-                      borderBottom: "1px solid #21262d",
-                      cursor: "pointer",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      transition: "background 0.2s",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#21262d")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                  >
-                    <div>
-                      <span
-                        style={{
-                          fontWeight: "bold",
-                          color: "#fff",
-                          marginRight: "10px",
-                        }}
-                      >
-                        {asset.symbol}
-                      </span>
-                      <span style={{ color: "#8b949e", fontSize: "13px" }}>
-                        — {asset.name}
-                      </span>
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        background: "#30363d",
-                        color: "#58a6ff",
-                        padding: "3px 8px",
-                        borderRadius: "12px",
-                        fontWeight: "bold",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {asset.asset_type}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {searchMessage && (
-            <p
+                📈 {t("TITLE")}
+              </h1>
+            </div>
+            <div
               style={{
-                textAlign: "center",
-                color: "#58a6ff",
-                marginTop: "10px",
-                fontSize: "13px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                gap: "10px",
               }}
             >
-              {searchMessage}
-            </p>
-          )}
-        </div>
+              <button
+                onClick={() => fetchMarketData()}
+                style={{
+                  background: "transparent",
+                  color: "#58a6ff",
+                  border: "1px solid #58a6ff",
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontWeight: "600",
+                }}
+              >
+                {t("Refresh")}
+              </button>
+            </div>
+          </header>
 
-        {/* Tab Menu Navigation Loop */}
-        <div
-          style={{
-            display: "flex",
-            gap: "12px",
-            marginBottom: "5px",
-            marginTop: "10px",
-            background: "#161b22",
-            padding: "8px",
-            borderRadius: "8px",
-            border: "1px solid #21262d",
-          }}
-        >
-          {["portfolio", "about"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveTab(t)}
-              style={{
-                flex: 1,
-                padding: "12px",
-                background: activeTab === t ? "#21262d" : "transparent",
-                color: activeTab === t ? "#58a6ff" : "#8b949e",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                textTransform: "uppercase",
-                fontSize: "12px",
-                fontWeight: activeTab === t ? "600" : "500",
-              }}
-            >
-              {t === "portfolio"
-                ? `⭐ ${user?.portfolioId || "Guest"}`
-                : "ℹ️ About"}
-            </button>
-          ))}
-        </div>
-
-        {/* RENDERING INTERFACE GATES */}
-        {activeTab === "about" ? (
-          <AboutPageView />
-        ) : (
+          {/* 🔍 SEARCH ASSETS CONTAINER */}
           <div
             style={{
               background: "#161b22",
               border: "1px solid #21262d",
-              borderRadius: "10px",
-              padding: "10px 20px",
-              marginBottom: "40px",
-              overflowX: "auto",
+              padding: "10px",
+              borderRadius: "8px",
+              marginBottom: "10px",
+              position: "relative",
             }}
           >
-            {marketData.length > 0 ? (
-              <table
+            <div style={{ position: "relative", width: "100%" }}>
+              <input
+                type="text"
+                placeholder={t("SEARCH_PLACEHOLDER")}
+                value={searchQuery}
+                onChange={(e) => handleInputChange(e.target.value)}
                 style={{
                   width: "100%",
-                  borderCollapse: "collapse",
-                  textAlign: "left",
-                  tableLayout: "fixed",
+                  padding: "12px",
+                  background: "#010409",
+                  color: "#fff",
+                  border: "1px solid #21262d",
+                  borderRadius: "6px",
+                  boxSizing: "border-box",
+                  fontSize: "14px",
                 }}
-              >
-                <thead>
-                  <tr
-                    style={{
-                      borderBottom: "1px solid #30363d",
-                      color: "#8b949e",
-                      fontSize: "13px",
-                    }}
-                  >
-                    <th style={{ padding: "12px 12px", width: "15%" }}>
-                      SYMBOL
-                    </th>
-                    <th style={{ padding: "12px 12px", width: "35%" }}>NAME</th>
-                    <th style={{ padding: "12px 12px", width: "20%" }}>TYPE</th>
-                    <th style={{ padding: "12px 12px", width: "15%" }}>
-                      PRICE
-                    </th>
-                    <th
+              />
+
+              {/* Dynamic Autocomplete Options Box */}
+              {searchResultsArray.length > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    background: "#161b22",
+                    border: "1px solid #30363d",
+                    borderRadius: "6px",
+                    marginTop: "5px",
+                    zIndex: 10,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                    overflow: "hidden",
+                  }}
+                >
+                  {searchResultsArray.map((asset) => (
+                    <div
+                      key={asset.symbol}
+                      onClick={() => handleSelectAsset(asset, user)}
                       style={{
-                        padding: "12px 12px",
-                        width: "10%",
-                        textAlign: "right",
+                        padding: "12px 16px",
+                        borderBottom: "1px solid #21262d",
+                        cursor: "pointer",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        transition: "background 0.2s",
                       }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = "#21262d")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
                     >
-                      CHANGE
-                    </th>
-                    <th style={{ padding: "12px 12px", width: "5%" }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {marketData.map((asset) => {
-                    const isPos =
-                      asset.price_change && !asset.price_change.startsWith("-");
-                    const rBg = "transparent";
-                    return (
-                      <tr
-                        key={asset.symbol}
-                        style={{
-                          borderBottom: "1px solid #21262d",
-                          fontSize: "14px",
-                          background: rBg,
-                          transition: "background 0.2s",
-                        }}
-                      >
-                        <td
+                      <div>
+                        <span
                           style={{
-                            ...cellStyle,
-                            padding: "6px 12px",
-                            fontWeight: "500",
-                            color: "#ffffff",
+                            fontWeight: "bold",
+                            color: "#fff",
+                            marginRight: "10px",
                           }}
                         >
                           {asset.symbol}
-                        </td>
-                        <td
-                          style={{
-                            ...cellStyle,
-                            padding: "6px 12px",
-                            color: "#c9d1d9",
-                          }}
-                          title={asset.name}
-                        >
-                          {asset.name}
-                        </td>
-                        <td
-                          style={{
-                            ...cellStyle,
-                            padding: "6px 12px",
-                            color: "#8b949e",
-                            fontSize: "12px",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {asset.type || activeTab}
-                        </td>
-                        <td
-                          style={{
-                            ...cellStyle,
-                            padding: "6px 12px",
-                            color: "#ffffff",
-                            fontFamily: "monospace",
-                          }}
-                        >
-                          $
-                          {parseFloat(asset.price || 0).toLocaleString(
-                            undefined,
-                            { minimumFractionDigits: 2 },
-                          )}
-                        </td>
-                        <td
-                          style={{
-                            ...cellStyle,
-                            padding: "6px 12px",
-                            color: isPos ? "#3fb950" : "#f85149",
-                            fontWeight: "700",
-                            fontFamily: "monospace",
-                            textAlign: "right",
-                          }}
-                        >
-                          {asset.price_change}
-                        </td>
-                        <td
-                          style={{ padding: "6px 12px", textAlign: "center" }}
-                        >
-                          <button
-                            onClick={() =>
-                              removeAssetFromPortfolio(asset.symbol)
-                            }
-                            style={{
-                              background: "transparent",
-                              color: "#8b949e",
-                              border: "none",
-                              cursor: "pointer",
-                              padding: 0,
-                            }}
-                            title="Remove"
-                          >
-                            🗑️
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <div
+                        </span>
+                        <span style={{ color: "#8b949e", fontSize: "13px" }}>
+                          — {asset.name}
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          background: "#30363d",
+                          color: "#58a6ff",
+                          padding: "3px 8px",
+                          borderRadius: "12px",
+                          fontWeight: "bold",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {asset.asset_type}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {searchMessage && (
+              <p
                 style={{
-                  padding: "30px 10px",
                   textAlign: "center",
-                  color: "#8b949e",
+                  color: "#58a6ff",
+                  marginTop: "10px",
+                  fontSize: "13px",
                 }}
               >
-                Nothing to display.
-              </div>
+                {searchMessage}
+              </p>
             )}
           </div>
-        )}
 
-        <div style={{ textAlign: "right", marginTop: "40px" }}>
-          <button
-            onClick={() => setShowConsole(!showConsole)}
+          {/* Tab Menu Navigation Loop */}
+          <div
             style={{
-              background: "#21262d",
-              color: "#8b949e",
-              border: "1px solid #30363d",
-              padding: "8px 16px",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "12px",
+              display: "flex",
+              gap: "12px",
+              marginBottom: "5px",
+              marginTop: "10px",
+              background: "#161b22",
+              padding: "8px",
+              borderRadius: "8px",
+              border: "1px solid #21262d",
             }}
           >
-            {showConsole ? "Hide Console" : "Show Console"}
-          </button>
+            {["portfolio", "about"].map((t) => (
+              <button
+                key={t}
+                onClick={() => setActiveTab(t)}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  background: activeTab === t ? "#21262d" : "transparent",
+                  color: activeTab === t ? "#58a6ff" : "#8b949e",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  textTransform: "uppercase",
+                  fontSize: "12px",
+                  fontWeight: activeTab === t ? "600" : "500",
+                }}
+              >
+                {t === "portfolio"
+                  ? `⭐ ${user?.portfolio_name || "Guest"}`
+                  : "ℹ️ About"}
+              </button>
+            ))}
+          </div>
+
+          {/* RENDERING INTERFACE GATES */}
+          {activeTab === "about" ? (
+            <AboutPageView />
+          ) : (
+            <div
+              style={{
+                background: "#161b22",
+                border: "1px solid #21262d",
+                borderRadius: "10px",
+                padding: "10px 20px",
+                marginBottom: "40px",
+                overflowX: "auto",
+              }}
+            >
+              {marketData.length > 0 ? (
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    textAlign: "left",
+                    tableLayout: "fixed",
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        borderBottom: "1px solid #30363d",
+                        color: "#8b949e",
+                        fontSize: "13px",
+                      }}
+                    >
+                      <th style={{ padding: "12px 12px", width: "15%" }}>
+                        SYMBOL
+                      </th>
+                      <th style={{ padding: "12px 12px", width: "35%" }}>
+                        NAME
+                      </th>
+                      <th style={{ padding: "12px 12px", width: "20%" }}>
+                        TYPE
+                      </th>
+                      <th style={{ padding: "12px 12px", width: "15%" }}>
+                        PRICE
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px 12px",
+                          width: "10%",
+                          textAlign: "right",
+                        }}
+                      >
+                        CHANGE
+                      </th>
+                      <th style={{ padding: "12px 12px", width: "5%" }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {marketData.map((asset) => {
+                      const isPos =
+                        asset.price_change &&
+                        !asset.price_change.startsWith("-");
+                      const rBg = "transparent";
+                      return (
+                        <tr
+                          key={asset.symbol}
+                          style={{
+                            borderBottom: "1px solid #21262d",
+                            fontSize: "14px",
+                            background: rBg,
+                            transition: "background 0.2s",
+                          }}
+                        >
+                          <td
+                            style={{
+                              ...cellStyle,
+                              padding: "6px 12px",
+                              fontWeight: "500",
+                              color: "#ffffff",
+                            }}
+                          >
+                            {asset.symbol}
+                          </td>
+                          <td
+                            style={{
+                              ...cellStyle,
+                              padding: "6px 12px",
+                              color: "#c9d1d9",
+                            }}
+                            title={asset.name}
+                          >
+                            {asset.name}
+                          </td>
+                          <td
+                            style={{
+                              ...cellStyle,
+                              padding: "6px 12px",
+                              color: "#8b949e",
+                              fontSize: "12px",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {asset.type || activeTab}
+                          </td>
+                          <td
+                            style={{
+                              ...cellStyle,
+                              padding: "6px 12px",
+                              color: "#ffffff",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            $
+                            {parseFloat(asset.price || 0).toLocaleString(
+                              undefined,
+                              { minimumFractionDigits: 2 },
+                            )}
+                          </td>
+                          <td
+                            style={{
+                              ...cellStyle,
+                              padding: "6px 12px",
+                              color: isPos ? "#3fb950" : "#f85149",
+                              fontWeight: "700",
+                              fontFamily: "monospace",
+                              textAlign: "right",
+                            }}
+                          >
+                            {asset.price_change}
+                          </td>
+                          <td
+                            style={{ padding: "6px 12px", textAlign: "center" }}
+                          >
+                            <button
+                              onClick={() =>
+                                removeAssetFromPortfolio(asset.symbol)
+                              }
+                              style={{
+                                background: "transparent",
+                                color: "#8b949e",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 0,
+                              }}
+                              title="Remove"
+                            >
+                              🗑️
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div
+                  style={{
+                    padding: "30px 10px",
+                    textAlign: "center",
+                    color: "#8b949e",
+                  }}
+                >
+                  Nothing to display.
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ textAlign: "right", marginTop: "40px" }}>
+            <button
+              onClick={() => setShowConsole(!showConsole)}
+              style={{
+                background: "#21262d",
+                color: "#8b949e",
+                border: "1px solid #30363d",
+                padding: "8px 16px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "12px",
+              }}
+            >
+              {showConsole ? "Hide Console" : "Show Console"}
+            </button>
+          </div>
+          <div
+            style={{
+              marginTop: "30px",
+              borderTop: "1px solid #21262d",
+              paddingTop: "30px",
+              display: showConsole ? "block" : "none",
+            }}
+          >
+            <h3>🖥️ System Console Logger</h3>
+            <textarea
+              readOnly
+              value={debugLog}
+              style={{
+                width: "100%",
+                height: "140px",
+                background: "#010409",
+                color: "#7cfc00",
+                padding: "16px",
+                fontFamily: "monospace",
+                fontSize: "12px",
+                border: "1px solid #21262d",
+                borderRadius: "6px",
+                resize: "none",
+              }}
+            />
+          </div>
+
+          {/* 💰 Google AdSense Responsive Space Banner */}
+          <GoogleAdBanner />
         </div>
         <div
           style={{
-            marginTop: "30px",
-            borderTop: "1px solid #21262d",
-            paddingTop: "30px",
-            display: showConsole ? "block" : "none",
+            width: "30%",
+            background: "#161b22",
+            border: "1px solid #21262d",
+            borderRadius: "10px",
+            padding: "20px",
+            height: "fit-content",
+            marginTop: "49px",
           }}
         >
-          <h3>🖥️ System Console Logger</h3>
-          <textarea
-            readOnly
-            value={debugLog}
-            style={{
-              width: "100%",
-              height: "140px",
-              background: "#010409",
-              color: "#7cfc00",
-              padding: "16px",
-              fontFamily: "monospace",
-              fontSize: "12px",
-              border: "1px solid #21262d",
-              borderRadius: "6px",
-              resize: "none",
-            }}
-          />
+          <h3 style={{ margin: "0 0 10px 0", color: "#ffffff" }}>
+            Sidebar Control
+          </h3>
+          <p style={{ color: "#c9d1d9", margin: 0 }}></p>
         </div>
-
-        {/* 💰 Google AdSense Responsive Space Banner */}
-        <GoogleAdBanner />
       </div>
     </div>
   );

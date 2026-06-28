@@ -1,7 +1,6 @@
-import db from '../config/db.js';
+import db from "../config/db.js";
 
 class User {
-
   // CREATE: Register a new user and auto-provision their default portfolio container
   static async create({ username, email, password }) {
     let connection; // Declare variable outer scope so finally block can see it
@@ -11,17 +10,22 @@ class User {
       await connection.beginTransaction();
 
       // 1. Insert user registry payload record
-      const userSql = "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)";
-      const [userResult] = await connection.query(userSql, [username, email, password]);
+      const userSql =
+        "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)";
+      const [userResult] = await connection.query(userSql, [
+        username,
+        email,
+        password,
+      ]);
       const userId = userResult.insertId;
 
       // 2. Automate creation of their first standard tracking layout envelope
-      const portfolioSql = "INSERT INTO portfolios (user_id, name) VALUES (?, 'Default Portfolio')";
+      const portfolioSql =
+        "INSERT INTO portfolios (user_id, name, selected) VALUES (?, 'Default', 1)";
       await connection.query(portfolioSql, [userId]);
 
       await connection.commit();
       return userId;
-
     } catch (error) {
       // Only attempt rollback if the connection was actually established
       if (connection) {
@@ -36,41 +40,38 @@ class User {
     }
   }
 
-    
-
-    // READ: Look up a user profile object using their unique email parameter pointer
-    static async findByEmail(email) {
-        const sql = `SELECT id, username, email, password_hash, avatar_url 
+  // READ: Look up a user profile object using their unique email parameter pointer
+  static async findByEmail(email) {
+    const sql = `SELECT id, username, email, password_hash, avatar_url 
                      FROM users 
                      WHERE email = ? 
                      LIMIT 1`;
-        const [rows] = await db.query(sql, [email]);
-        
-        // FIXED: Returns the first object item in the array list if it exists, otherwise null
-        return rows.length > 0 ? rows[0] : null; 
-    }
+    const [rows] = await db.query(sql, [email]);
 
-    // READ: Look up a user profile object using their unique username pointer string
-    static async findByUsername(username) {
-        const sql = `SELECT id, username, email, avatar_url 
+    // FIXED: Returns the first object item in the array list if it exists, otherwise null
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  // READ: Look up a user profile object using their unique username pointer string
+  static async findByUsername(username) {
+    const sql = `SELECT id, username, email, avatar_url 
                      FROM users 
                      WHERE username = ? 
                      LIMIT 1`;
-        const [rows] = await db.query(sql, [username]);
-        
-        // FIXED: Returns the first object item in the array list if it exists, otherwise null
-        return rows.length > 0 ? rows[0] : null; 
-    }
+    const [rows] = await db.query(sql, [username]);
 
+    // FIXED: Returns the first object item in the array list if it exists, otherwise null
+    return rows.length > 0 ? rows[0] : null;
+  }
 
-    // READ: Find user object via primary key
-    static async findById(id) {
-        const sql = `SELECT id, username, email, avatar_url, created_at 
+  // READ: Find user object via primary key
+  static async findById(id) {
+    const sql = `SELECT id, username, email, avatar_url, created_at 
                      FROM users 
                      WHERE id = ?`;
-        const [rows] = await db.query(sql, [id]);
-        return rows[0] || null;
-    }
+    const [rows] = await db.query(sql, [id]);
+    return rows[0] || null;
+  }
 }
 
 export default User;

@@ -29,6 +29,7 @@ create table if not exists portfolios (
     id int auto_increment primary key,
     user_id int not null,
     name varchar(200) not null,
+    selected bit not null default 0,
     created_at timestamp default current_timestamp,
     updated_at timestamp default current_timestamp on update current_timestamp,
     foreign key (user_id) references users (id) on delete cascade
