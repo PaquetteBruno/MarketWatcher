@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import i18n from "./i18n.js";
 import GlobalTicker from "./components/GlobalTicker/GlobalTicker";
+import UserBar from "./components/UserBar/UserBar";
 
 // 📜 PERSONALIZED TRADING TERMINAL ABOUT VIEW & PAYPAL INTEGRATION
 function AboutPageView() {
@@ -214,149 +215,6 @@ function GoogleAdBanner() {
   );
 }
 
-const LanguageSelector = ({
-  user,
-  handleSignOut,
-  currentTab,
-  setActiveTab,
-}) => {
-  const currentLang = i18n.language || "en";
-  const t = (key) => i18n.t(key);
-
-  const handleLangChange = (lng) => {
-    i18n.changeLanguage(lng);
-    setActiveTab(currentTab); // Force dynamic layout text update on click
-  };
-
-  return (
-    <div
-      style={{
-        position: "absolute", // Fixed pins it relative to the window, completely ignoring inner div spaces
-        top: "15px",
-        right: "10px",
-        zIndex: 999999, // 👈 HIGHER INTENSITY LAYER GAIN: Forces flags over your global banner completely
-        display: "flex",
-        gap: "12px",
-        padding: "0px 14px",
-        boxShadow: "0 4px 14px rgba(0,0,0,0.5)",
-        alignItems: "center",
-      }}
-    >
-      {/* 🇺🇸 English Selector Button */}
-      <img
-        src="https://flagcdn.com/32x24/us.webp"
-        alt="English"
-        title="English"
-        onClick={() => handleLangChange("en")}
-        style={{
-          width: "24px",
-          height: "16px",
-          borderRadius: "2px",
-          cursor: "pointer",
-          opacity: currentLang === "en" ? 1 : 0.75, // 👈 BRIGHTER STANDBY OPACITY (0.55 instead of 0.3)
-          transform: currentLang === "en" ? "scale(1.15)" : "scale(1)",
-          transition: "opacity 0.2s, transform 0.2s",
-          boxShadow:
-            currentLang === "en" ? "0 0 8px rgba(88,166,255,0.6)" : "none",
-        }}
-        onMouseEnter={(e) => {
-          if (currentLang !== "en") e.currentTarget.style.opacity = "0.85";
-        }}
-        onMouseLeave={(e) => {
-          if (currentLang !== "en") e.currentTarget.style.opacity = "0.55";
-        }}
-      />
-
-      {/* 🇫🇷 French Selector Button */}
-      <img
-        src="https://flagcdn.com/32x24/fr.webp"
-        alt="Français"
-        title="Français"
-        onClick={() => handleLangChange("fr")}
-        style={{
-          width: "24px",
-          height: "16px",
-          borderRadius: "2px",
-          cursor: "pointer",
-          opacity: currentLang === "fr" ? 1 : 0.75, // 👈 BRIGHTER STANDBY OPACITY
-          transform: currentLang === "fr" ? "scale(1.15)" : "scale(1)",
-          transition: "opacity 0.2s, transform 0.2s",
-          boxShadow:
-            currentLang === "fr" ? "0 0 8px rgba(88,166,255,0.6)" : "none",
-        }}
-        onMouseEnter={(e) => {
-          if (currentLang !== "fr") e.currentTarget.style.opacity = "0.85";
-        }}
-        onMouseLeave={(e) => {
-          if (currentLang !== "fr") e.currentTarget.style.opacity = "0.55";
-        }}
-      />
-
-      {/* 🇪🇸 Spanish Selector Button */}
-      <img
-        src="https://flagcdn.com/32x24/es.webp"
-        alt="Español"
-        title="Español"
-        onClick={() => handleLangChange("es")}
-        style={{
-          width: "24px",
-          height: "16px",
-          borderRadius: "2px",
-          cursor: "pointer",
-          opacity: currentLang === "es" ? 1 : 0.75, // 👈 BRIGHTER STANDBY OPACITY
-          transform: currentLang === "es" ? "scale(1.15)" : "scale(1)",
-          transition: "opacity 0.2s, transform 0.2s",
-          boxShadow:
-            currentLang === "es" ? "0 0 8px rgba(88,166,255,0.6)" : "none",
-        }}
-        onMouseEnter={(e) => {
-          if (currentLang !== "es") e.currentTarget.style.opacity = "0.85";
-        }}
-        onMouseLeave={(e) => {
-          if (currentLang !== "es") e.currentTarget.style.opacity = "0.55";
-        }}
-      />
-      <span
-        style={{
-          fontSize: "13px",
-          color: "#8b949e",
-          marginLeft: "10px",
-          marginTop: "0px",
-        }}
-      >
-        <strong style={{ color: "#58a6ff" }}>
-          {user?.username || "Guest"}
-        </strong>
-      </span>
-      <button
-        onClick={() => {
-          console.log("Sign out proxy initiated.");
-          if (typeof handleSignOut === "function") {
-            handleSignOut();
-          } else {
-            alert(
-              "Error: handleSignOut is not being passed correctly as a function! It is currently: " +
-                typeof handleSignOut,
-            );
-          }
-        }}
-        style={{
-          background: "transparent",
-          color: "#58a6ff",
-          border: "1px solid #58a6ff",
-          padding: "3px 8px",
-          borderRadius: "6px",
-          cursor: "pointer",
-          fontSize: "11px",
-          fontWeight: "600",
-        }}
-      >
-        {t("SIGN_OUT")}
-      </button>
-    </div>
-  );
-};
-
 function App() {
   const t = (key) => i18n.t(key);
   const [user, setUser] = useState(() => {
@@ -386,10 +244,7 @@ function App() {
   const prevglobalPricesRef = useRef({});
   const timerRef = useRef(null);
 
-  /*   const changeLanguage = (lng) => {
-    i18n.changeLanguage(lng);
-  }; */
-
+  //Google
   useEffect(() => {
     const initGoogle = () => {
       if (window.google && (!token || !user)) {
@@ -453,6 +308,11 @@ function App() {
       displayGlobalData();
     }
   }, [token]); // Triggers when the page loads or if the token changes
+
+  const handleLangChange = (lng) => {
+    i18n.changeLanguage(lng);
+    setActiveTab(setActiveTab);
+  };
 
   const fetchMarketData = useCallback(async () => {
     if (!user || !token || activeTab === "about") return;
@@ -842,25 +702,16 @@ function App() {
           margin: "0 -20px 25px -20px",
         }}
       >
-        {/* TOP PANEL: Language selector & Profile layer sitting naturally in the page flow */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            padding: "0 20px",
-          }}
-        >
-          <LanguageSelector
-            user={user}
-            handleSignOut={handleSignOut}
-            currentTab={activeTab}
-            setActiveTab={setActiveTab}
-          />
-        </div>
-
+        <UserBar
+          username={user?.username}
+          handleSignOut={handleSignOut}
+          handleLangChange={handleLangChange}
+          currentLang={i18n.language || "en"}
+          t={t}
+        />
         <GlobalTicker globalData={globalData} />
       </div>
+
       <div
         style={{
           display: "flex",
@@ -870,6 +721,7 @@ function App() {
           boxSizing: "border-box",
         }}
       >
+        {/* Header */}
         <div style={{ flex: 1, maxWidth: "60%", margin: "0 auto" }}>
           <header
             style={{
@@ -1233,6 +1085,7 @@ function App() {
             </div>
           )}
 
+          {/* Console */}
           <div style={{ textAlign: "right", marginTop: "40px" }}>
             <button
               onClick={() => setShowConsole(!showConsole)}
