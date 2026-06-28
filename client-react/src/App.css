@@ -5,17 +5,18 @@ body,
   padding: 0;
   width: 100%;
   min-height: 100vh;
-  background: #0d1117; /* your dark color */
+  background: #0d1117;
 }
 
 .marquee-container {
   overflow: hidden;
   white-space: nowrap;
   display: flex;
-  width: 100%;
-  background-color: #090d14; /* Matches your dashboard background */
-  padding: 12px 0;
+  background-color: #161b22;
   border-bottom: 1px solid #1e222d;
+  margin-top: 55px;
+  border-bottom: "1px solid #21262d";
+  border-top: "1px solid #21262d";
 }
 
 /* Ticker Track - Moves the dual copies seamlessly */

@@ -3,6 +3,7 @@ import "./App.css";
 import i18n from "./i18n.js";
 import GlobalTicker from "./components/GlobalTicker/GlobalTicker";
 import UserBar from "./components/UserBar/UserBar";
+import PageHeader from "./components/PageHeader/PageHeader";
 
 // 📜 PERSONALIZED TRADING TERMINAL ABOUT VIEW & PAYPAL INTEGRATION
 function AboutPageView() {
@@ -500,6 +501,10 @@ function App() {
     textOverflow: "ellipsis",
   };
 
+  const onRefresh = () => {
+    fetchMarketData();
+  };
+
   // REGISTRATION SECTION
   if (!token || !user) {
     return (
@@ -688,87 +693,36 @@ function App() {
         backgroundColor: "#0d1117",
         color: "#c9d1d9",
         fontFamily: "sans-serif",
-        minHeight: "100vh",
-        padding: "10px 20px 40px 20px",
         boxSizing: "border-box",
+        width: "100%",
       }}
     >
-      {/* 📦 STEP 1: HEADER CONTAINER SYSTEM (Stops the layout overlap completely) */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "15px",
-          margin: "0 -20px 25px -20px",
-        }}
-      >
-        <UserBar
-          username={user?.username}
-          handleSignOut={handleSignOut}
-          handleLangChange={handleLangChange}
-          currentLang={i18n.language || "en"}
-          t={t}
-        />
-        <GlobalTicker globalData={globalData} />
-      </div>
+      <UserBar
+        username={user?.username}
+        handleSignOut={handleSignOut}
+        handleLangChange={handleLangChange}
+        currentLang={i18n.language || "en"}
+        t={t}
+      />
+
+      <GlobalTicker globalData={globalData} />
 
       <div
         style={{
           display: "flex",
           width: "100%",
           gap: "20px",
-          padding: "20px",
+          padding: "30px",
           boxSizing: "border-box",
         }}
       >
-        {/* Header */}
-        <div style={{ flex: 1, maxWidth: "60%", margin: "0 auto" }}>
-          <header
-            style={{
-              marginBottom: "10px",
-              borderBottom: "1px solid #21262d",
-              paddingBottom: "0px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <h1
-                style={{
-                  color: "#ffffff",
-                  margin: "0 0 5px 0",
-                  fontSize: "24px",
-                }}
-              >
-                📈 {t("TITLE")}
-              </h1>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-end",
-                gap: "10px",
-              }}
-            >
-              <button
-                onClick={() => fetchMarketData()}
-                style={{
-                  background: "transparent",
-                  color: "#58a6ff",
-                  border: "1px solid #58a6ff",
-                  padding: "3px 8px",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "11px",
-                  fontWeight: "600",
-                }}
-              >
-                {t("Refresh")}
-              </button>
-            </div>
-          </header>
+        <div style={{ flex: 1, maxWidth: "100%", margin: "0 auto" }}>
+          <PageHeader
+            smallIcon="📈"
+            title={t("TITLE")}
+            onRefresh={onRefresh}
+            t={t}
+          />
 
           {/* 🔍 SEARCH ASSETS CONTAINER */}
           <div
@@ -951,16 +905,16 @@ function App() {
                       }}
                     >
                       <th style={{ padding: "12px 12px", width: "15%" }}>
-                        SYMBOL
+                        {t("SYMBOL")}
                       </th>
                       <th style={{ padding: "12px 12px", width: "35%" }}>
-                        NAME
+                        {t("NAME")}
                       </th>
                       <th style={{ padding: "12px 12px", width: "20%" }}>
-                        TYPE
+                        {t("TYPE")}
                       </th>
                       <th style={{ padding: "12px 12px", width: "15%" }}>
-                        PRICE
+                        {t("PRICE")}
                       </th>
                       <th
                         style={{
@@ -969,7 +923,7 @@ function App() {
                           textAlign: "right",
                         }}
                       >
-                        CHANGE
+                        {t("CHANGE")}
                       </th>
                       <th style={{ padding: "12px 12px", width: "5%" }}></th>
                     </tr>

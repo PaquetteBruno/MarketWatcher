@@ -15,19 +15,8 @@
 
 function GlobalTicker({ globalData }) {
   return (
-    <div
-      className="marquee-container"
-      style={{
-        width: "100%",
-        background: "#161b22",
-        borderBottom: "1px solid #21262d",
-        borderTop: "1px solid #21262d",
-        padding: "0px",
-        marginTop: "10px",
-      }}
-    >
+    <div className="marquee-container">
       <div className="marquee-track">
-        {/* FIRST PASS FOR INFINITE LOOP EFFECT */}
         {globalData.map((global, index) => {
           const isPos =
             global.price_change && !global.price_change.startsWith("-");
