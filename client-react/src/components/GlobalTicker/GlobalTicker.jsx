@@ -20,7 +20,7 @@ function GlobalTicker({ globalData }) {
         {globalData.map((global, index) => {
           const isPos =
             global.price_change && !global.price_change.startsWith("-");
-          //const flStatus = priceFlashing[global.symbol];
+
           const mBg = "transparent";
           return (
             <div
@@ -33,11 +33,13 @@ function GlobalTicker({ globalData }) {
                 padding: "4px 8px",
                 borderRadius: "4px",
                 transition: "background 0.2s",
-                fontSize: "13px",
+                fontSize: "15px",
                 fontWeight: "600",
               }}
             >
-              <span style={{ color: "#8b949e" }}>{global.name}:</span>
+              <span style={{ color: "#99bee9", fontSize: "16px" }}>
+                {global.name}:
+              </span>
               <span style={{ color: "#ffffff", fontFamily: "monospace" }}>
                 $
                 {parseFloat(global.price || 0).toLocaleString(undefined, {
@@ -72,11 +74,13 @@ function GlobalTicker({ globalData }) {
                 padding: "4px 8px",
                 borderRadius: "4px",
                 transition: "background 0.2s",
-                fontSize: "13px",
+                fontSize: "15px",
                 fontWeight: "600",
               }}
             >
-              <span style={{ color: "#8b949e" }}>{global.name}:</span>
+              <span style={{ color: "#99bee9", fontSize: "16px" }}>
+                {global.name}:
+              </span>
               <span style={{ color: "#ffffff", fontFamily: "monospace" }}>
                 $
                 {parseFloat(global.price || 0).toLocaleString(undefined, {

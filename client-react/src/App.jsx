@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import i18n from "./i18n.js";
-import GlobalTicker from "./components/GlobalTicker/GlobalTicker";
+import GlobalTicker from "./components/GlobalTicker/GlobalTicker.jsx";
 import UserBar from "./components/UserBar/UserBar";
 import PageHeader from "./components/PageHeader/PageHeader";
 import SideBar from "./components/SideBar/SideBar";
+import SearchBar from "./components/SearchBar/SearchBar";
 
 // 📜 PERSONALIZED TRADING TERMINAL ABOUT VIEW & PAYPAL INTEGRATION
 function AboutPageView() {
@@ -364,6 +365,7 @@ function App() {
 
   const handleInputChange = async (text) => {
     setSearchQuery(text);
+    setSearchMessage("");
 
     if (text.trim().length < 3) {
       setSearchResultsArray([]);
@@ -701,8 +703,8 @@ function App() {
       <div className="app-container">
         <GlobalTicker globalData={globalData} />
 
-        <div style={{ display: "flex", gap: "5%", marginTop: "20px" }}>
-          <div style={{ width: "calc(70% - 5%)" }}>
+        <div style={{ display: "flex", gap: "2%", marginTop: "20px" }}>
+          <div style={{ width: "calc(70% - 2%)" }}>
             <PageHeader
               smallIcon="📈"
               title={t("TITLE")}
@@ -711,104 +713,15 @@ function App() {
             />
 
             <div className="content-layout">
-              <input
-                type="text"
-                placeholder={t("SEARCH_PLACEHOLDER")}
-                value={searchQuery}
-                onChange={(e) => handleInputChange(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  background: "#010409",
-                  color: "#fff",
-                  border: "1px solid #21262d",
-                  borderRadius: "6px",
-                  boxSizing: "border-box",
-                  fontSize: "14px",
-                }}
+              <SearchBar
+                user={user}
+                searchQuery={searchQuery}
+                searchResultsArray={searchResultsArray}
+                searchMessage={searchMessage}
+                handleInputChange={handleInputChange}
+                handleSelectAsset={handleSelectAsset}
+                t={t}
               />
-
-              {/* Dynamic Autocomplete Options Box */}
-              {searchResultsArray.length > 0 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    left: 0,
-                    right: 0,
-                    background: "#161b22",
-                    border: "1px solid #30363d",
-                    borderRadius: "6px",
-                    marginTop: "5px",
-                    zIndex: 10,
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-                    overflow: "hidden",
-                  }}
-                >
-                  {searchResultsArray.map((asset) => (
-                    <div
-                      key={asset.symbol}
-                      onClick={() => handleSelectAsset(asset, user)}
-                      style={{
-                        padding: "12px 16px",
-                        borderBottom: "1px solid #21262d",
-                        cursor: "pointer",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        transition: "background 0.2s",
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = "#21262d")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "transparent")
-                      }
-                    >
-                      <div>
-                        <span
-                          style={{
-                            fontWeight: "bold",
-                            color: "#fff",
-                            marginRight: "10px",
-                          }}
-                        >
-                          {asset.symbol}
-                        </span>
-                        <span style={{ color: "#8b949e", fontSize: "13px" }}>
-                          — {asset.name}
-                        </span>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          background: "#30363d",
-                          color: "#58a6ff",
-                          padding: "3px 8px",
-                          borderRadius: "12px",
-                          fontWeight: "bold",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {asset.asset_type}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {searchMessage && (
-                <p
-                  style={{
-                    textAlign: "center",
-                    color: "#58a6ff",
-                    marginTop: "10px",
-                    fontSize: "13px",
-                  }}
-                >
-                  {searchMessage}
-                </p>
-              )}
             </div>
 
             {/* Tab Menu Navigation Loop */}
