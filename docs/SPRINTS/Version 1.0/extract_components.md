@@ -23,9 +23,11 @@ git commit -m "Refactor App by extracting PageHeader component"
 ✓ Sidebar extracted
 git commit -m "Refactor App by extracting Sidebar component"
 
+✓ Sidebar extracted
+git commit -m "Refactor App by extracting SearchBar component"
+
 In Progress - NavigationTabs
 
 Pending
 
 - PortfolioTable
-- SearchBar
