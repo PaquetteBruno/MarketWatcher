@@ -20,10 +20,12 @@ git commit -m "Refactor App by extracting UserBar component"
 ✓ PageHeader extracted
 git commit -m "Refactor App by extracting PageHeader component"
 
-In Progress - Sidebar
+✓ Sidebar extracted
+git commit -m "Refactor App by extracting Sidebar component"
+
+In Progress - NavigationTabs
 
 Pending
 
-- NavigationTabs
 - PortfolioTable
 - SearchBar

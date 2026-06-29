@@ -24,14 +24,14 @@ function UserBar({
         display: "flex",
         justifyContent: "flex-end",
         alignItems: "center",
-        padding: "0 20px",
+        padding: "0 40px",
       }}
     >
       <div
         style={{
           position: "absolute", // Fixed pins it relative to the window, completely ignoring inner div spaces
           top: "15px",
-          right: "10px",
+          right: "41px",
           zIndex: 999999, // 👈 HIGHER INTENSITY LAYER GAIN: Forces flags over your global banner completely
           display: "flex",
           gap: "12px",

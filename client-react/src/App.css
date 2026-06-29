@@ -8,13 +8,27 @@ body,
   background: #0d1117;
 }
 
+.app-container {
+  width: 95%;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.content-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
 .marquee-container {
   overflow: hidden;
   white-space: nowrap;
   display: flex;
   background-color: #161b22;
   border-bottom: 1px solid #1e222d;
-  margin-top: 55px;
+  margin-top: 25px;
   border-bottom: "1px solid #21262d";
   border-top: "1px solid #21262d";
 }

@@ -4,6 +4,7 @@ import i18n from "./i18n.js";
 import GlobalTicker from "./components/GlobalTicker/GlobalTicker";
 import UserBar from "./components/UserBar/UserBar";
 import PageHeader from "./components/PageHeader/PageHeader";
+import SideBar from "./components/SideBar/SideBar";
 
 // 📜 PERSONALIZED TRADING TERMINAL ABOUT VIEW & PAYPAL INTEGRATION
 function AboutPageView() {
@@ -688,15 +689,7 @@ function App() {
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: "#0d1117",
-        color: "#c9d1d9",
-        fontFamily: "sans-serif",
-        boxSizing: "border-box",
-        width: "100%",
-      }}
-    >
+    <div>
       <UserBar
         username={user?.username}
         handleSignOut={handleSignOut}
@@ -705,37 +698,19 @@ function App() {
         t={t}
       />
 
-      <GlobalTicker globalData={globalData} />
+      <div className="app-container">
+        <GlobalTicker globalData={globalData} />
 
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          gap: "20px",
-          padding: "30px",
-          boxSizing: "border-box",
-        }}
-      >
-        <div style={{ flex: 1, maxWidth: "100%", margin: "0 auto" }}>
-          <PageHeader
-            smallIcon="📈"
-            title={t("TITLE")}
-            onRefresh={onRefresh}
-            t={t}
-          />
+        <div style={{ display: "flex", gap: "5%", marginTop: "20px" }}>
+          <div style={{ width: "calc(70% - 5%)" }}>
+            <PageHeader
+              smallIcon="📈"
+              title={t("TITLE")}
+              onRefresh={onRefresh}
+              t={t}
+            />
 
-          {/* 🔍 SEARCH ASSETS CONTAINER */}
-          <div
-            style={{
-              background: "#161b22",
-              border: "1px solid #21262d",
-              padding: "10px",
-              borderRadius: "8px",
-              marginBottom: "10px",
-              position: "relative",
-            }}
-          >
-            <div style={{ position: "relative", width: "100%" }}>
+            <div className="content-layout">
               <input
                 type="text"
                 placeholder={t("SEARCH_PLACEHOLDER")}
@@ -821,287 +796,277 @@ function App() {
                   ))}
                 </div>
               )}
-            </div>
-            {searchMessage && (
-              <p
-                style={{
-                  textAlign: "center",
-                  color: "#58a6ff",
-                  marginTop: "10px",
-                  fontSize: "13px",
-                }}
-              >
-                {searchMessage}
-              </p>
-            )}
-          </div>
 
-          {/* Tab Menu Navigation Loop */}
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              marginBottom: "5px",
-              marginTop: "10px",
-              background: "#161b22",
-              padding: "8px",
-              borderRadius: "8px",
-              border: "1px solid #21262d",
-            }}
-          >
-            {["portfolio", "about"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setActiveTab(t)}
-                style={{
-                  flex: 1,
-                  padding: "12px",
-                  background: activeTab === t ? "#21262d" : "transparent",
-                  color: activeTab === t ? "#58a6ff" : "#8b949e",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  textTransform: "uppercase",
-                  fontSize: "12px",
-                  fontWeight: activeTab === t ? "600" : "500",
-                }}
-              >
-                {t === "portfolio"
-                  ? `⭐ ${user?.portfolio_name || "Guest"}`
-                  : "ℹ️ About"}
-              </button>
-            ))}
-          </div>
-
-          {/* RENDERING INTERFACE GATES */}
-          {activeTab === "about" ? (
-            <AboutPageView />
-          ) : (
-            <div
-              style={{
-                background: "#161b22",
-                border: "1px solid #21262d",
-                borderRadius: "10px",
-                padding: "10px 20px",
-                marginBottom: "40px",
-                overflowX: "auto",
-              }}
-            >
-              {marketData.length > 0 ? (
-                <table
+              {searchMessage && (
+                <p
                   style={{
-                    width: "100%",
-                    borderCollapse: "collapse",
-                    textAlign: "left",
-                    tableLayout: "fixed",
-                  }}
-                >
-                  <thead>
-                    <tr
-                      style={{
-                        borderBottom: "1px solid #30363d",
-                        color: "#8b949e",
-                        fontSize: "13px",
-                      }}
-                    >
-                      <th style={{ padding: "12px 12px", width: "15%" }}>
-                        {t("SYMBOL")}
-                      </th>
-                      <th style={{ padding: "12px 12px", width: "35%" }}>
-                        {t("NAME")}
-                      </th>
-                      <th style={{ padding: "12px 12px", width: "20%" }}>
-                        {t("TYPE")}
-                      </th>
-                      <th style={{ padding: "12px 12px", width: "15%" }}>
-                        {t("PRICE")}
-                      </th>
-                      <th
-                        style={{
-                          padding: "12px 12px",
-                          width: "10%",
-                          textAlign: "right",
-                        }}
-                      >
-                        {t("CHANGE")}
-                      </th>
-                      <th style={{ padding: "12px 12px", width: "5%" }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {marketData.map((asset) => {
-                      const isPos =
-                        asset.price_change &&
-                        !asset.price_change.startsWith("-");
-                      const rBg = "transparent";
-                      return (
-                        <tr
-                          key={asset.symbol}
-                          style={{
-                            borderBottom: "1px solid #21262d",
-                            fontSize: "14px",
-                            background: rBg,
-                            transition: "background 0.2s",
-                          }}
-                        >
-                          <td
-                            style={{
-                              ...cellStyle,
-                              padding: "6px 12px",
-                              fontWeight: "500",
-                              color: "#ffffff",
-                            }}
-                          >
-                            {asset.symbol}
-                          </td>
-                          <td
-                            style={{
-                              ...cellStyle,
-                              padding: "6px 12px",
-                              color: "#c9d1d9",
-                            }}
-                            title={asset.name}
-                          >
-                            {asset.name}
-                          </td>
-                          <td
-                            style={{
-                              ...cellStyle,
-                              padding: "6px 12px",
-                              color: "#8b949e",
-                              fontSize: "12px",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            {asset.type || activeTab}
-                          </td>
-                          <td
-                            style={{
-                              ...cellStyle,
-                              padding: "6px 12px",
-                              color: "#ffffff",
-                              fontFamily: "monospace",
-                            }}
-                          >
-                            $
-                            {parseFloat(asset.price || 0).toLocaleString(
-                              undefined,
-                              { minimumFractionDigits: 2 },
-                            )}
-                          </td>
-                          <td
-                            style={{
-                              ...cellStyle,
-                              padding: "6px 12px",
-                              color: isPos ? "#3fb950" : "#f85149",
-                              fontWeight: "700",
-                              fontFamily: "monospace",
-                              textAlign: "right",
-                            }}
-                          >
-                            {asset.price_change}
-                          </td>
-                          <td
-                            style={{ padding: "6px 12px", textAlign: "center" }}
-                          >
-                            <button
-                              onClick={() =>
-                                removeAssetFromPortfolio(asset.symbol)
-                              }
-                              style={{
-                                background: "transparent",
-                                color: "#8b949e",
-                                border: "none",
-                                cursor: "pointer",
-                                padding: 0,
-                              }}
-                              title="Remove"
-                            >
-                              🗑️
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              ) : (
-                <div
-                  style={{
-                    padding: "30px 10px",
                     textAlign: "center",
-                    color: "#8b949e",
+                    color: "#58a6ff",
+                    marginTop: "10px",
+                    fontSize: "13px",
                   }}
                 >
-                  Nothing to display.
-                </div>
+                  {searchMessage}
+                </p>
               )}
             </div>
-          )}
 
-          {/* Console */}
-          <div style={{ textAlign: "right", marginTop: "40px" }}>
-            <button
-              onClick={() => setShowConsole(!showConsole)}
+            {/* Tab Menu Navigation Loop */}
+            <div
               style={{
-                background: "#21262d",
-                color: "#8b949e",
-                border: "1px solid #30363d",
-                padding: "8px 16px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "12px",
+                display: "flex",
+                gap: "12px",
+                marginBottom: "5px",
+                marginTop: "10px",
+                background: "#161b22",
+                padding: "8px",
+                borderRadius: "8px",
+                border: "1px solid #21262d",
               }}
             >
-              {showConsole ? "Hide Console" : "Show Console"}
-            </button>
+              {["portfolio", "about"].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setActiveTab(t)}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: activeTab === t ? "#21262d" : "transparent",
+                    color: activeTab === t ? "#58a6ff" : "#8b949e",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    fontSize: "12px",
+                    fontWeight: activeTab === t ? "600" : "500",
+                  }}
+                >
+                  {t === "portfolio"
+                    ? `⭐ ${user?.portfolio_name || "Guest"}`
+                    : "ℹ️ About"}
+                </button>
+              ))}
+            </div>
+
+            {/* RENDERING INTERFACE GATES */}
+            {activeTab === "about" ? (
+              <AboutPageView />
+            ) : (
+              <div
+                style={{
+                  background: "#161b22",
+                  border: "1px solid #21262d",
+                  borderRadius: "10px",
+                  padding: "10px 20px",
+                  marginBottom: "40px",
+                  overflowX: "auto",
+                }}
+              >
+                {marketData.length > 0 ? (
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      textAlign: "left",
+                      tableLayout: "fixed",
+                    }}
+                  >
+                    <thead>
+                      <tr
+                        style={{
+                          borderBottom: "1px solid #30363d",
+                          color: "#8b949e",
+                          fontSize: "13px",
+                        }}
+                      >
+                        <th style={{ padding: "12px 12px", width: "15%" }}>
+                          {t("SYMBOL")}
+                        </th>
+                        <th style={{ padding: "12px 12px", width: "35%" }}>
+                          {t("NAME")}
+                        </th>
+                        <th style={{ padding: "12px 12px", width: "20%" }}>
+                          {t("TYPE")}
+                        </th>
+                        <th style={{ padding: "12px 12px", width: "15%" }}>
+                          {t("PRICE")}
+                        </th>
+                        <th
+                          style={{
+                            padding: "12px 12px",
+                            width: "10%",
+                            textAlign: "right",
+                          }}
+                        >
+                          {t("CHANGE")}
+                        </th>
+                        <th style={{ padding: "12px 12px", width: "5%" }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {marketData.map((asset) => {
+                        const isPos =
+                          asset.price_change &&
+                          !asset.price_change.startsWith("-");
+                        const rBg = "transparent";
+                        return (
+                          <tr
+                            key={asset.symbol}
+                            style={{
+                              borderBottom: "1px solid #21262d",
+                              fontSize: "14px",
+                              background: rBg,
+                              transition: "background 0.2s",
+                            }}
+                          >
+                            <td
+                              style={{
+                                ...cellStyle,
+                                padding: "6px 12px",
+                                fontWeight: "500",
+                                color: "#ffffff",
+                              }}
+                            >
+                              {asset.symbol}
+                            </td>
+                            <td
+                              style={{
+                                ...cellStyle,
+                                padding: "6px 12px",
+                                color: "#c9d1d9",
+                              }}
+                              title={asset.name}
+                            >
+                              {asset.name}
+                            </td>
+                            <td
+                              style={{
+                                ...cellStyle,
+                                padding: "6px 12px",
+                                color: "#8b949e",
+                                fontSize: "12px",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              {asset.type || activeTab}
+                            </td>
+                            <td
+                              style={{
+                                ...cellStyle,
+                                padding: "6px 12px",
+                                color: "#ffffff",
+                                fontFamily: "monospace",
+                              }}
+                            >
+                              $
+                              {parseFloat(asset.price || 0).toLocaleString(
+                                undefined,
+                                { minimumFractionDigits: 2 },
+                              )}
+                            </td>
+                            <td
+                              style={{
+                                ...cellStyle,
+                                padding: "6px 12px",
+                                color: isPos ? "#3fb950" : "#f85149",
+                                fontWeight: "700",
+                                fontFamily: "monospace",
+                                textAlign: "right",
+                              }}
+                            >
+                              {asset.price_change}
+                            </td>
+                            <td
+                              style={{
+                                padding: "6px 12px",
+                                textAlign: "center",
+                              }}
+                            >
+                              <button
+                                onClick={() =>
+                                  removeAssetFromPortfolio(asset.symbol)
+                                }
+                                style={{
+                                  background: "transparent",
+                                  color: "#8b949e",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 0,
+                                }}
+                                title="Remove"
+                              >
+                                🗑️
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div
+                    style={{
+                      padding: "30px 10px",
+                      textAlign: "center",
+                      color: "#8b949e",
+                    }}
+                  >
+                    Nothing to display.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div
+          <div style={{ width: "30%", fontSize: "24px" }}>
+            <SideBar smallIcon="📋" title={t("Informations")}></SideBar>
+          </div>
+        </div>
+
+        <div style={{ textAlign: "right", marginTop: "20px", display: "none" }}>
+          <button
+            onClick={() => setShowConsole(!showConsole)}
             style={{
-              marginTop: "30px",
-              borderTop: "1px solid #21262d",
-              paddingTop: "30px",
-              display: showConsole ? "block" : "none",
+              background: "#21262d",
+              color: "#8b949e",
+              border: "1px solid #30363d",
+              padding: "8px 16px",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "12px",
             }}
           >
-            <h3>🖥️ System Console Logger</h3>
-            <textarea
-              readOnly
-              value={debugLog}
-              style={{
-                width: "100%",
-                height: "140px",
-                background: "#010409",
-                color: "#7cfc00",
-                padding: "16px",
-                fontFamily: "monospace",
-                fontSize: "12px",
-                border: "1px solid #21262d",
-                borderRadius: "6px",
-                resize: "none",
-              }}
-            />
-          </div>
-
-          {/* 💰 Google AdSense Responsive Space Banner */}
-          <GoogleAdBanner />
+            {showConsole ? "Hide Console" : "Show Console"}
+          </button>
         </div>
         <div
           style={{
-            width: "30%",
-            background: "#161b22",
-            border: "1px solid #21262d",
-            borderRadius: "10px",
-            padding: "20px",
-            height: "fit-content",
-            marginTop: "49px",
+            marginTop: "30px",
+            borderTop: "1px solid #21262d",
+            paddingTop: "30px",
+            display: showConsole ? "block" : "none",
           }}
         >
-          <h3 style={{ margin: "0 0 10px 0", color: "#ffffff" }}>
-            Sidebar Control
-          </h3>
-          <p style={{ color: "#c9d1d9", margin: 0 }}></p>
+          <h3>🖥️ System Console Logger</h3>
+          <textarea
+            readOnly
+            value={debugLog}
+            style={{
+              width: "100%",
+              height: "140px",
+              background: "#010409",
+              color: "#7cfc00",
+              padding: "16px",
+              fontFamily: "monospace",
+              fontSize: "12px",
+              border: "1px solid #21262d",
+              borderRadius: "6px",
+              resize: "none",
+            }}
+          />
         </div>
+
+        {/* 💰 Google AdSense Responsive Space Banner */}
+        <GoogleAdBanner />
       </div>
     </div>
   );
