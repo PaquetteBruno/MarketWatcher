@@ -29,10 +29,10 @@ function UserBar({
     >
       <div
         style={{
-          position: "absolute", // Fixed pins it relative to the window, completely ignoring inner div spaces
+          position: "absolute",
           top: "15px",
           right: "41px",
-          zIndex: 999999, // 👈 HIGHER INTENSITY LAYER GAIN: Forces flags over your global banner completely
+          zIndex: 999999,
           display: "flex",
           gap: "12px",
           padding: "0px 14px",
@@ -40,7 +40,7 @@ function UserBar({
           alignItems: "center",
         }}
       >
-        {/* 🇺🇸 English Selector Button */}
+        {/* US */}
         <img
           src="https://flagcdn.com/32x24/us.webp"
           alt="English"
@@ -65,7 +65,7 @@ function UserBar({
           }}
         />
 
-        {/* 🇫🇷 French Selector Button */}
+        {/* FR */}
         <img
           src="https://flagcdn.com/32x24/fr.webp"
           alt="Français"
@@ -90,7 +90,7 @@ function UserBar({
           }}
         />
 
-        {/* 🇪🇸 Spanish Selector Button */}
+        {/* ES */}
         <img
           src="https://flagcdn.com/32x24/es.webp"
           alt="Español"

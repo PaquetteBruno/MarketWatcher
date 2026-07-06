@@ -48,6 +48,25 @@ class Portfolio {
 
     return result.length > 0 ? result[0] : null;
   }
+
+  static async updateSelectedPortfolio(portfolio_id) {
+    let sql = `select p1.id 
+                   from portfolios p1
+                   join portfolios p2 on p1.user_id = p2.user_id
+                  where p2.id = ?
+                    and p1.selected = 1;`;
+    const [rows] = await db.query(sql, [portfolio_id]);
+
+    if (rows.length > 0) {
+      sql = `update portfolios set selected = 0 where id = ?`;
+      await db.query(sql, rows[0].id);
+    }
+
+    sql = `update portfolios set selected = 1 where id = ?`;
+    const [result] = await db.query(sql, [portfolio_id]);
+
+    return result.length > 0 ? result[0] : null;
+  }
 }
 
 export default Portfolio;

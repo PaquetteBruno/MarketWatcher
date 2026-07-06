@@ -1,5 +1,4 @@
 import User from "../models/User.js";
-import Portfolio from "../models/Portfolio.js";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import bcrypt from "bcryptjs"; // 👍 Imported bcryptjs to securely hash local accounts
@@ -68,12 +67,6 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
-    const portfolio = await Portfolio.findSelectedByUserId(user.id);
-    if (!portfolio) {
-      return res.status(401).json({ error: "PORTFOLIO_NOT_FOUND" });
-    }
-    user.Portfolio = portfolio;
-
     // 3. Security Check: Use bcrypt to compare plain text against the database hash
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
@@ -83,18 +76,20 @@ export const loginUser = async (req, res) => {
     // 4. Clear confidential data from the response target variable object
     delete user.password_hash;
 
-    // 5. Build dynamic session signature token string
     const token = jwt.sign(
       {
         id: user.id,
         email: user.email,
         username: user.username,
-        portfolioId: portfolio.id,
-        portfolio_name: portfolio.name,
       },
       process.env.JWT_SECRET,
       { expiresIn: "24h" },
     );
+
+    const portfolios = await User.getPortfolios(user.id);
+    if (!portfolios) {
+      return res.status(401).json({ error: "USER_NO_PORTFOLIO" });
+    }
 
     res.status(200).json({
       message: "AUTHENTICATION_SUCCESSFUL",
@@ -102,10 +97,9 @@ export const loginUser = async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
-        portfolioId: portfolio.id,
-        portfolio_name: portfolio.name,
         email: user.email,
         avatar_url: user.avatar_url,
+        portfolios: portfolios,
       },
     });
   } catch (error) {
@@ -163,17 +157,16 @@ export const googleLoginUser = async (req, res) => {
       user = await User.findById(userId);
     }
 
-    const portfolio = await Portfolio.findSelectedByUserId(user.id);
-    if (!portfolio) {
-      return res.status(401).json({ error: "PORTFOLIO_NOT_FOUND" });
-    }
-    user.Portfolio = portfolio;
-
     const sessionToken = jwt.sign(
       { id: user.id, email: user.email, username: user.username },
       process.env.JWT_SECRET,
       { expiresIn: "24h" },
     );
+
+    const portfolios = await User.getPortfolios(user.id);
+    if (!portfolios) {
+      return res.status(401).json({ error: "USER_NO_PORTFOLIO" });
+    }
 
     res.status(200).json({
       message: "AUTHENTICATION_SUCCESSFUL",
@@ -182,9 +175,8 @@ export const googleLoginUser = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        portfolioId: portfolio.id,
-        portfolio_name: portfolio.name,
         avatar_url: avatar_url || user.avatar_url,
+        portfolios: portfolios,
       },
     });
   } catch (error) {

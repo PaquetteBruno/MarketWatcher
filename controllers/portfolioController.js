@@ -1,4 +1,4 @@
-import Asset from "../models/Asset.js";
+import Asset from "../models/Portfolio.js";
 import Portfolio from "../models/Portfolio.js";
 import Position from "../models/Position.js";
 import db from "../config/db.js";
@@ -39,6 +39,16 @@ export const addAssetToPortfolio = async (req, res) => {
       .status(500)
       .json({ error: "INTERNAL_SERVER_ERROR", details: error.message });
   }
+};
+
+export const updateSelectedPortfolio = async (req, res) => {
+  const { portfolio_id } = req.body;
+
+  await Portfolio.updateSelectedPortfolio(portfolio_id);
+
+  res.status(201).json({
+    message: "SELECTED_PORTFOLIO_CHANGED",
+  });
 };
 
 export const removeAssetFromPortfolio = async (req, res) => {
@@ -101,7 +111,7 @@ export const addTransactionPosition = async (req, res) => {
 // =========================================================================
 // 📋 RETRIEVE RECENT ACTIVE USER WATCHLIST SNAPSHOTS
 // =========================================================================
-export const getPortfolioAsset = async (req, res) => {
+export const getPortfolioAssets = async (req, res) => {
   try {
     const yahooFinance = new YahooFinanceClass({
       suppressNotices: ["yahooSurvey"],
@@ -118,34 +128,36 @@ export const getPortfolioAsset = async (req, res) => {
 
     const [assets] = await db.query(sql, [portfolioId]);
 
-    const symbols = assets.map((r) => r.symbol);
-    const quotes = await yahooFinance.quote(symbols);
+    if (assets.length > 0) {
+      const symbols = assets.map((r) => r.symbol);
+      const quotes = await yahooFinance.quote(symbols);
 
-    const quoteMap = {};
-    if (Array.isArray(quotes)) {
-      quotes.forEach((q) => {
-        if (q?.symbol) quoteMap[q.symbol.toLowerCase()] = q;
-      });
-    } else if (quotes?.symbol) {
-      quoteMap[quotes.symbol.toLowerCase()] = quotes;
-    }
+      const quoteMap = {};
+      if (Array.isArray(quotes)) {
+        quotes.forEach((q) => {
+          if (q?.symbol) quoteMap[q.symbol.toLowerCase()] = q;
+        });
+      } else if (quotes?.symbol) {
+        quoteMap[quotes.symbol.toLowerCase()] = quotes;
+      }
 
-    for (const symbol of symbols) {
-      const liveData = quoteMap[symbol.toLowerCase()];
-      if (!liveData) continue;
+      for (const symbol of symbols) {
+        const liveData = quoteMap[symbol.toLowerCase()];
+        if (!liveData) continue;
 
-      const price = liveData.regularMarketPrice || 0;
-      const changePercent = liveData.regularMarketChangePercent || 0;
-      const price_change = `${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(2)}%`;
+        const price = liveData.regularMarketPrice || 0;
+        const changePercent = liveData.regularMarketChangePercent || 0;
+        const price_change = `${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(2)}%`;
 
-      await db.query(
-        "UPDATE assets SET price = ?, price_change = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?",
-        [price, price_change, symbol],
+        await db.query(
+          "UPDATE assets SET price = ?, price_change = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?",
+          [price, price_change, symbol],
+        );
+      }
+      console.log(
+        `[${new Date().toLocaleTimeString()}] Global marquee indices synchronized.`,
       );
     }
-    console.log(
-      `[${new Date().toLocaleTimeString()}] Global marquee indices synchronized.`,
-    );
 
     // Returns an empty array gracefully to your React state hook if they have no stocks yet
     res.status(200).json({ data: assets });

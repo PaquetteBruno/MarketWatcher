@@ -26,7 +26,6 @@ function SearchBar({
         }}
       />
 
-      {/* Dynamic Autocomplete Options Box */}
       {searchResultsArray.length > 0 && (
         <div
           style={{

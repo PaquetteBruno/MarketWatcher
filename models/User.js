@@ -72,6 +72,12 @@ class User {
     const [rows] = await db.query(sql, [id]);
     return rows[0] || null;
   }
+
+  static async getPortfolios(user_id) {
+    const sql = `SELECT * from portfolios where user_id = ?`;
+    const [rows] = await db.query(sql, [user_id]);
+    return rows || [];
+  }
 }
 
 export default User;

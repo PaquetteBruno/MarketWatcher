@@ -3,7 +3,8 @@ import {
   addAssetToPortfolio,
   removeAssetFromPortfolio,
   addTransactionPosition,
-  getPortfolioAsset,
+  getPortfolioAssets,
+  updateSelectedPortfolio,
 } from "../controllers/portfolioController.js";
 
 const router = express.Router();
@@ -42,6 +43,16 @@ router.post("/add-position", addTransactionPosition);
  *     summary: Authenticate or register a user via Google OAuth
  *     description: Intercepts a Google credential payload token and creates a session.
  */
-router.get("/:id", getPortfolioAsset);
+router.get("/:id", getPortfolioAssets);
+
+/**
+ * @openapi
+ * /api/portfolio/update-selected:
+ *   get:
+ *     summary: Authenticate or register a user via Google OAuth
+ *     description: Intercepts a Google credential payload token and creates a session.
+ */
+
+router.post("/update-selected", updateSelectedPortfolio);
 
 export default router;

@@ -1,18 +1,3 @@
-/**
- * GlobalTicker
- *
- * Responsibility:
- * Displays the scrolling market ticker.
- *
- * Receives:
- * - globalData
- *
- * Does NOT:
- * - Fetch data
- * - Authenticate users
- * - Manage application state
- */
-
 function GlobalTicker({ globalData }) {
   return (
     <div className="marquee-container">
@@ -58,7 +43,6 @@ function GlobalTicker({ globalData }) {
           );
         })}
 
-        {/* DUPLICATE PASS FOR SEAMLESS INFINITE LOOP EFFECT */}
         {globalData.map((global, index) => {
           const isPos =
             global.price_change && !global.price_change.startsWith("-");

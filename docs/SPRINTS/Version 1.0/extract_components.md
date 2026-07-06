@@ -26,8 +26,7 @@ git commit -m "Refactor App by extracting Sidebar component"
 ✓ Sidebar extracted
 git commit -m "Refactor App by extracting SearchBar component"
 
-In Progress - NavigationTabs
+✓ Sidebar extracted
+git commit -m "Refactor App by extracting NavigationTabs component"
 
-Pending
-
-- PortfolioTable
+In Progress - PortfolioTable
