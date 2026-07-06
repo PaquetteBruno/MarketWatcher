@@ -15,7 +15,6 @@ class Portfolio {
     return result.insertId;
   }
 
-  // READ: Check if an asset is already linked to a portfolio inside your bridge table
   static async findLink(portfolioId, assetId) {
     const sql = `SELECT id, name FROM portfolio_asset 
                      WHERE portfolio_id = ? AND asset_id = ? 
@@ -24,7 +23,6 @@ class Portfolio {
     return rows.length > 0 ? rows[0].id : null;
   }
 
-  // CREATE: Build a fresh structural link connection row inside the portfolio_asset join table
   static async addAssetToPortfolio(portfolioId, assetId) {
     const sql = `INSERT IGNORE INTO portfolio_asset (portfolio_id, asset_id) VALUES (?, ?)`;
     const [result] = await db.query(sql, [portfolioId, assetId]);

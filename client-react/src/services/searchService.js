@@ -9,7 +9,7 @@ const searchService = {
     });
 
     const json = await response.json();
-    return json.data || [];
+    return json || [];
   },
 };
 

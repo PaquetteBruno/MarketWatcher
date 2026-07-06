@@ -1,38 +1,22 @@
 # MarketWatcher Development Log
 
+Sticky Notes :
+
+Services fetch data. Hooks own state. Components display state.
+
 ## Architecture
 
 React/Vite frontend
 Express backend
 MySQL database
 
-Current Goal:
-Refactor App.jsx into reusable components.
+Goals completed :
 
-Completed
+- Refactor App.jsx into reusable components.
+- Refactor App.jsx to get all endpoint calls into services.
 
-✓ GlobalTicker extracted
+In progress :
 
-✓ UserBar extracted
+- Create Hooks to handle everything more cleanly and professionnaly.
 
-Pending
-
-- PageHeader
-- Sidebar
-- NavigationTabs
-- PortfolioTable
-- SearchBar
-
-Current Rule
-
-Presentation components only.
-
-No business logic inside extracted components.
-
-Git History
-
-2026-06-28
-
-Extract GlobalTicker component from App
-
-Extract UserBar component from App
+Pending :

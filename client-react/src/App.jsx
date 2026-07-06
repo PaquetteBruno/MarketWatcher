@@ -34,15 +34,15 @@ function App() {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("mw_user");
-    return saved ? JSON.parse(saved) : null;
+    return saved && saved !== "undefined" ? JSON.parse(saved) : null;
   });
   const [token, setToken] = useState(() => {
     return localStorage.getItem("mw_token") || null;
   });
   const [activePortfolio, setActivePortfolio] = useState(() => {
-    const savedUser = localStorage.getItem("mw_user");
-    if (savedUser) {
-      const parsed = JSON.parse(savedUser);
+    const saved = localStorage.getItem("mw_user");
+    if (saved && saved !== "undefined") {
+      const parsed = JSON.parse(saved);
       const active = parsed.portfolios?.find((p) => p.selected === 1);
       return active ? active.id : 1;
     }
@@ -58,13 +58,14 @@ function App() {
           callback: async (resObj) => {
             setAuthError("");
             try {
-              const data = await googleService.google(
+              const response = await googleService.google(
                 JSON.stringify({ idToken: resObj.credential }),
               );
 
-              if (!data.ok) {
+              if (!response.ok) {
                 throw new Error(data.error || "Verification rejected.");
               }
+              const data = await response.json();
 
               localStorage.setItem("mw_token", data.token);
               localStorage.setItem("mw_user", JSON.stringify(data.user));
@@ -94,13 +95,8 @@ function App() {
     //if (!user || !token) return; ----- I Need to know where to put this so It checks everytime instead of putting it everywhere.
 
     const displayGlobalData = async () => {
-      try {
-        const data = await globalService.getGlobalData(token);
-
-        setGlobalData(data);
-      } catch (error) {
-        console.error("Failed to fetch global data:", error);
-      }
+      const data = await globalService.getGlobalData(token);
+      setGlobalData(data);
     };
 
     displayGlobalData();
@@ -111,7 +107,7 @@ function App() {
     setActivePortfolio(activePortfolio);
   };
 
-  const fetchPortfolioAssets = useCallback(async () => {
+  const getPortfolioAssets = useCallback(async () => {
     const assets = await portfolioService.getPortfolioAssets(
       token,
       activePortfolio,
@@ -130,12 +126,12 @@ function App() {
 
   useEffect(() => {
     const initFetch = async () => {
-      await fetchPortfolioAssets();
+      await getPortfolioAssets();
     };
     initFetch();
 
     return;
-  }, [user, token, fetchPortfolioAssets]);
+  }, [user, token, getPortfolioAssets]);
 
   const handleInputChange = async (text) => {
     setSearchQuery(text);
@@ -146,17 +142,17 @@ function App() {
       return;
     }
 
-    const data = searchService.search(text);
+    const data = await searchService.search(text);
     setSearchResultsArray(data || []);
   };
 
-  const handleSelectAsset = async (asset, user) => {
+  const handleSelectAsset = async (asset) => {
     setSearchResultsArray([]);
     setSearchQuery("");
 
     try {
       await portfolioService.addPortfolioAsset(
-        user.portfolioId,
+        activePortfolio,
         asset.symbol,
         asset.name,
         asset.asset_type,
@@ -168,20 +164,18 @@ function App() {
         `[${asset.symbol}] ${asset.name} was added successfully.`,
       );
 
-      fetchPortfolioAssets();
+      getPortfolioAssets();
     } catch (error) {
       setSearchMessage(`Error trying to add asset: ${error.message}`);
     }
   };
 
   const removeAssetFromPortfolio = async (symbol) => {
-    if (!symbol || !user) return;
-
     if (!window.confirm(`Remove ${symbol}?`)) return;
     try {
       await portfolioService.deletePortfolioAsset(activePortfolio, symbol);
 
-      fetchPortfolioAssets();
+      getPortfolioAssets();
     } catch (error) {
       setDebugLog(`Removal Failure: ${error.message}`);
     }
@@ -192,11 +186,12 @@ function App() {
     setAuthError("");
     try {
       const response = authService.register(username, email, password);
-      if (!response.ok) {
-        throw new Error(response.error || "Rejected.");
+      if (response.ok) {
+        setIsRegistering(false);
+        setPassword("");
+      } else {
+        setAuthError(response.error || "AUTHENTICATION_FAILED");
       }
-      setIsRegistering(false);
-      setPassword("");
     } catch (error) {
       setAuthError(error.message);
     }
@@ -246,7 +241,7 @@ function App() {
   };
 
   const onRefresh = () => {
-    fetchPortfolioAssets();
+    getPortfolioAssets();
   };
 
   const handleCoffeeDonation = () => {

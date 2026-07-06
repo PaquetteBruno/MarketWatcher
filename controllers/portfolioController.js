@@ -1,4 +1,4 @@
-import Asset from "../models/Portfolio.js";
+import Asset from "../models/Asset.js";
 import Portfolio from "../models/Portfolio.js";
 import Position from "../models/Position.js";
 import db from "../config/db.js";
