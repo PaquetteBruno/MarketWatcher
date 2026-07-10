@@ -1,7 +1,7 @@
 function SearchBar({
   user,
   searchQuery,
-  searchResultsArray,
+  searchResults,
   searchMessage,
   handleInputChange,
   handleSelectAsset,
@@ -26,7 +26,7 @@ function SearchBar({
         }}
       />
 
-      {searchResultsArray.length > 0 && (
+      {searchResults.length > 0 && (
         <div
           style={{
             position: "absolute",
@@ -42,7 +42,7 @@ function SearchBar({
             overflow: "hidden",
           }}
         >
-          {searchResultsArray.map((asset) => (
+          {searchResults.map((asset) => (
             <div
               key={asset.symbol}
               onClick={() => handleSelectAsset(asset, user)}

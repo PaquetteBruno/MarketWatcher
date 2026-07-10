@@ -11,10 +11,14 @@ import Portfolios from "./components/Portfolio/Portfolio";
 import AssetList from "./components/AssetList/AssetList";
 import PageFooter from "./components/PageFooter/PageFooter";
 import globalService from "./services/globalService";
-import portfolioService from "./services/portfolioService.js";
-import searchService from "./services/searchService.js";
-import authService from "./services/authService.js";
-import googleService from "./services/googleService.js";
+import portfolioService from "./services/portfolioService";
+import searchService from "./services/searchService";
+import authService from "./services/authService";
+import googleService from "./services/googleService";
+import useAuth from "./hooks/useAuth";
+import usePortfolio from "./hooks/usePortfolio";
+import useGlobal from "./hooks/useGlobal";
+import useSearch from "./hooks/useSearch";
 
 function App() {
   const t = (key) => i18n.t(key);
@@ -24,34 +28,21 @@ function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
-  const [portfolioAssets, setPortfolioAssets] = useState([]);
-  const [globalData, setGlobalData] = useState([]);
+
   const [showConsole, setShowConsole] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResultsArray, setSearchResultsArray] = useState([]);
-  const [searchMessage, setSearchMessage] = useState("");
   const [debugLog, setDebugLog] = useState("");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("mw_user");
-    return saved && saved !== "undefined" ? JSON.parse(saved) : null;
-  });
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem("mw_token") || null;
-  });
-  const [activePortfolio, setActivePortfolio] = useState(() => {
-    const saved = localStorage.getItem("mw_user");
-    if (saved && saved !== "undefined") {
-      const parsed = JSON.parse(saved);
-      const active = parsed.portfolios?.find((p) => p.selected === 1);
-      return active ? active.id : 1;
-    }
-    return 0;
-  });
+
+  const auth = useAuth();
+  const portfolio = usePortfolio();
+  const global = useGlobal();
+  const search = useSearch();
 
   useEffect(() => {
+    if (auth.token || auth.user) return;
+
     const initGoogle = () => {
-      if (window.google && (!token || !user)) {
+      if (window.google && (!auth.token || !auth.user)) {
         window.google.accounts.id.initialize({
           client_id:
             "607204517221-liol36qcu1b51u42a69gid0fthokfvvc.apps.googleusercontent.com",
@@ -66,11 +57,7 @@ function App() {
                 throw new Error(data.error || "Verification rejected.");
               }
               const data = await response.json();
-
-              localStorage.setItem("mw_token", data.token);
-              localStorage.setItem("mw_user", JSON.stringify(data.user));
-              setToken(data.token);
-              setUser(data.user);
+              auth.completeLogin(data.user, data.token);
             } catch (err) {
               setAuthError(err.message);
             }
@@ -88,36 +75,33 @@ function App() {
       window.addEventListener("load", initGoogle);
       return () => window.removeEventListener("load", initGoogle);
     }
-  }, [user, token]);
-
+  }, [auth]);
   // First page load
   useEffect(() => {
-    //if (!user || !token) return; ----- I Need to know where to put this so It checks everytime instead of putting it everywhere.
-
     const displayGlobalData = async () => {
-      const data = await globalService.getGlobalData(token);
-      setGlobalData(data);
+      const data = await globalService.getGlobalData(auth.token);
+      global.setGlobalData(data);
     };
 
     displayGlobalData();
-  }, [token]);
+  }, [global, auth]);
 
   const handleLangChange = (lng) => {
     i18n.changeLanguage(lng);
-    setActivePortfolio(activePortfolio);
+    //portfolio.setActivePortfolio(portfolio.activePortfolio);
   };
 
   const getPortfolioAssets = useCallback(async () => {
     const assets = await portfolioService.getPortfolioAssets(
-      token,
-      activePortfolio,
+      auth.token,
+      portfolio.activePortfolio,
     );
-    setPortfolioAssets(assets);
-  }, [token, activePortfolio]);
+    portfolio.setPortfolioAssets(assets);
+  }, [auth, portfolio]);
 
   const handlePortfolioChange = async (portfolio_id) => {
-    portfolioService.updateSelected(portfolio_id, token);
-    setActivePortfolio(portfolio_id);
+    portfolioService.updateSelected(portfolio_id, auth.token);
+    portfolio.setActivePortfolio(portfolio_id);
   };
 
   const handleNewPortfolio = async () => {
@@ -131,28 +115,28 @@ function App() {
     initFetch();
 
     return;
-  }, [user, token, getPortfolioAssets]);
+  }, [auth, getPortfolioAssets]);
 
   const handleInputChange = async (text) => {
-    setSearchQuery(text);
-    setSearchMessage("");
+    search.setSearchQuery(text);
+    search.setSearchMessage("");
 
     if (text.trim().length < 3) {
-      setSearchResultsArray([]);
+      search.setSearchResults([]);
       return;
     }
 
     const data = await searchService.search(text);
-    setSearchResultsArray(data || []);
+    search.setSearchResults(data || []);
   };
 
   const handleSelectAsset = async (asset) => {
-    setSearchResultsArray([]);
-    setSearchQuery("");
+    search.setSearchResults([]);
+    search.setSearchQuery("");
 
     try {
       await portfolioService.addPortfolioAsset(
-        activePortfolio,
+        portfolio.activePortfolio,
         asset.symbol,
         asset.name,
         asset.asset_type,
@@ -160,20 +144,23 @@ function App() {
         asset.price_change,
       );
 
-      setSearchMessage(
+      search.setSearchMessage(
         `[${asset.symbol}] ${asset.name} was added successfully.`,
       );
 
       getPortfolioAssets();
     } catch (error) {
-      setSearchMessage(`Error trying to add asset: ${error.message}`);
+      search.setSearchMessage(`Error trying to add asset: ${error.message}`);
     }
   };
 
   const removeAssetFromPortfolio = async (symbol) => {
     if (!window.confirm(`Remove ${symbol}?`)) return;
     try {
-      await portfolioService.deletePortfolioAsset(activePortfolio, symbol);
+      await portfolioService.deletePortfolioAsset(
+        portfolio.activePortfolio,
+        symbol,
+      );
 
       getPortfolioAssets();
     } catch (error) {
@@ -204,40 +191,31 @@ function App() {
       const response = await authService.login(email, password);
 
       if (!response.ok) {
-        throw new Error(response.error || "Block.");
+        throw new Error(response.error || "LOGIN_FAILED");
       }
 
-      localStorage.setItem("mw_token", response.token);
-      localStorage.setItem("mw_user", JSON.stringify(response.user));
+      auth.completeLogin(response.user, response.token);
 
-      setToken(response.token);
-      setUser(response.user);
-
-      setActivePortfolio(
-        response.user.portfolios.find((p) => p.selected === 1).id,
+      portfolio.setActivePortfolio(
+        auth.user.portfolios.find((p) => p.selected === 1).id,
       );
-    } catch (err) {
-      setAuthError(err.message);
+    } catch (error) {
+      setAuthError(error.message);
     }
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem("mw_token");
-    localStorage.removeItem("mw_user");
+    auth.completeLogout();
 
-    setToken(null);
-    setUser(null);
-    setPortfolioAssets([]);
-    setGlobalData([]);
+    portfolio.clear();
+    global.clear();
+    search.clear();
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
 
-    setSearchQuery("");
-    setSearchResultsArray([]);
-    setSearchMessage("");
-    setDebugLog("Session terminated safely.");
+    setDebugLog("Sign out completed.");
   };
 
   const onRefresh = () => {
@@ -249,7 +227,7 @@ function App() {
     window.open(paypalMeUrl, "_blank", "noopener,noreferrer");
   };
 
-  if (!token || !user) {
+  if (!auth.token || !auth.user) {
     return (
       <LoginPage
         username={username}
@@ -272,7 +250,7 @@ function App() {
   return (
     <div>
       <UserBar
-        username={user?.username}
+        username={auth.user?.username}
         handleSignOut={handleSignOut}
         handleLangChange={handleLangChange}
         currentLang={i18n.language || "en"}
@@ -280,7 +258,7 @@ function App() {
       />
 
       <div className="app-container">
-        <GlobalTicker globalData={globalData} />
+        <GlobalTicker globalData={global.globalData} />
 
         <div style={{ display: "flex", gap: "2%", marginTop: "20px" }}>
           <div style={{ width: "calc(70% - 2%)" }}>
@@ -292,23 +270,23 @@ function App() {
             />
             <div className="content-layout">
               <SearchBar
-                user={user}
-                searchQuery={searchQuery}
-                searchResultsArray={searchResultsArray}
-                searchMessage={searchMessage}
+                user={auth.user}
+                searchQuery={search.searchQuery}
+                searchResults={search.searchResults}
+                searchMessage={search.searchMessage}
                 handleInputChange={handleInputChange}
                 handleSelectAsset={handleSelectAsset}
                 t={t}
               />
             </div>
             <Portfolios
-              user={user}
+              user={auth.user}
               handlePortfolioChange={handlePortfolioChange}
               handleNewPortfolio={handleNewPortfolio}
-              activePortfolio={activePortfolio}
+              activePortfolio={portfolio.activePortfolio}
             />
             <AssetList
-              portfolioAssets={portfolioAssets}
+              portfolioAssets={portfolio.portfolioAssets}
               removeAssetFromPortfolio={removeAssetFromPortfolio}
               t={t}
             ></AssetList>

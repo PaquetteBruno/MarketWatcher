@@ -21,21 +21,21 @@ function UserBar({
   return (
     <div
       style={{
+        width: "95%",
+        maxWidth: "1800px",
         display: "flex",
+        margin: "0 auto",
+        paddingRight: "35px",
         justifyContent: "flex-end",
-        alignItems: "center",
-        padding: "0 40px",
       }}
     >
       <div
         style={{
           position: "absolute",
           top: "15px",
-          right: "41px",
           zIndex: 999999,
           display: "flex",
-          gap: "12px",
-          padding: "0px 14px",
+          gap: "20px",
           boxShadow: "0 4px 14px rgba(0,0,0,0.5)",
           alignItems: "center",
         }}
@@ -119,6 +119,7 @@ function UserBar({
             fontSize: "13px",
             color: "#8b949e",
             marginLeft: "10px",
+            marginRight: "10px",
             marginTop: "0px",
           }}
         >
