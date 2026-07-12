@@ -4,6 +4,7 @@ import {
   removeAssetFromPortfolio,
   addTransactionPosition,
   getPortfolioAssets,
+  getActivePortfolio,
   updateSelectedPortfolio,
 } from "../controllers/portfolioController.js";
 
@@ -44,6 +45,15 @@ router.post("/add-position", addTransactionPosition);
  *     description: Intercepts a Google credential payload token and creates a session.
  */
 router.get("/:id", getPortfolioAssets);
+
+/**
+ * @openapi
+ * /api/portfolio/active/:id:
+ *   get:
+ *     summary: Gets the user portfolio with selected = 1
+ *     description: Gets the user portfolio with selected = 1
+ */
+router.get("/active/:id", getActivePortfolio);
 
 /**
  * @openapi

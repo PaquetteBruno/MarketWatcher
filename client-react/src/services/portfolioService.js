@@ -13,6 +13,20 @@ const portfolioService = {
     return json.data || [];
   },
 
+  async getActivePortfolio(token, user_id) {
+    const endpoint = `http://localhost:5000/api/portfolio/active/${user_id}`;
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const json = await response.json();
+    return json.data || [];
+  },
+
   async getPortfolioAssets(token, portfolio_id) {
     const endpoint = `http://localhost:5000/api/portfolio/${portfolio_id}`;
     const response = await fetch(endpoint, {

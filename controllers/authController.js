@@ -13,33 +13,29 @@ export const registerUser = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // 1. Fail Fast Input Validation
     if (!username || !email || !password) {
       return res.status(400).json({ error: "MISSING_REQUIRED_FIELDS" });
     }
 
-    // 2. Business Logic Guard: Check if user already exists
     const emailExists = await User.findByEmail(email);
     const usernameExists = await User.findByUsername(username);
+
     if (emailExists || usernameExists) {
       return res.status(409).json({ error: "USER_ALREADY_EXISTS" });
     }
 
-    // 3. Securely hash the password before saving to the MySQL database
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // 4. Coordinate with database layer, passing the salted hash instead of raw text
     const userId = await User.create({
       username,
       email,
       password: hashedPassword,
     });
 
-    // 5. Return success payload
-    res.status(201).json({
+    res.status(200).json({
       message: "USER_REGISTERED_SUCCESSFULLY",
-      data: { id: userId, username, email },
+      user: { id: userId, username, email },
     });
   } catch (error) {
     console.error("Controller Registration Exception Loop:", error.message);
@@ -56,24 +52,22 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Fail Fast Input Validation
     if (!email || !password) {
       return res.status(400).json({ error: "MISSING_REQUIRED_FIELDS" });
     }
 
-    // 2. Fetch User Object Record Entity from Database via Model
     const user = await User.findByEmail(email);
+
     if (!user) {
-      return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+      return res.status(401).json({ error: "AUTH_INVALID_CREDENTIALS" });
     }
 
-    // 3. Security Check: Use bcrypt to compare plain text against the database hash
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+
     if (!isPasswordValid) {
-      return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+      return res.status(401).json({ error: "AUTH_INVALID_CREDENTIALS" });
     }
 
-    // 4. Clear confidential data from the response target variable object
     delete user.password_hash;
 
     const token = jwt.sign(
@@ -87,6 +81,7 @@ export const loginUser = async (req, res) => {
     );
 
     const portfolios = await User.getPortfolios(user.id);
+
     if (!portfolios) {
       return res.status(401).json({ error: "USER_NO_PORTFOLIO" });
     }

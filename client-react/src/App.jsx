@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import i18n from "./i18n.js";
 import LoginPage from "./components/LoginPage/LoginPage";
@@ -10,24 +10,17 @@ import SearchBar from "./components/SearchBar/SearchBar";
 import Portfolios from "./components/Portfolio/Portfolio";
 import AssetList from "./components/AssetList/AssetList";
 import PageFooter from "./components/PageFooter/PageFooter";
-import globalService from "./services/globalService";
 import portfolioService from "./services/portfolioService";
 import searchService from "./services/searchService";
-import authService from "./services/authService";
-import googleService from "./services/googleService";
 import useAuth from "./hooks/useAuth";
 import usePortfolio from "./hooks/usePortfolio";
 import useGlobal from "./hooks/useGlobal";
 import useSearch from "./hooks/useSearch";
+import useInit from "./hooks/useInit";
 
 function App() {
   const t = (key) => i18n.t(key);
   const timerRef = useRef(null);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
 
   const [showConsole, setShowConsole] = useState(false);
   const [debugLog, setDebugLog] = useState("");
@@ -37,85 +30,28 @@ function App() {
   const portfolio = usePortfolio();
   const global = useGlobal();
   const search = useSearch();
+  const loadInit = useInit(auth, global, portfolio);
+
+  console.log("App render");
 
   useEffect(() => {
-    if (auth.token || auth.user) return;
-
-    const initGoogle = () => {
-      if (window.google && (!auth.token || !auth.user)) {
-        window.google.accounts.id.initialize({
-          client_id:
-            "607204517221-liol36qcu1b51u42a69gid0fthokfvvc.apps.googleusercontent.com",
-          callback: async (resObj) => {
-            setAuthError("");
-            try {
-              const response = await googleService.google(
-                JSON.stringify({ idToken: resObj.credential }),
-              );
-
-              if (!response.ok) {
-                throw new Error(data.error || "Verification rejected.");
-              }
-              const data = await response.json();
-              auth.completeLogin(data.user, data.token);
-            } catch (err) {
-              setAuthError(err.message);
-            }
-          },
-        });
-        window.google.accounts.id.renderButton(
-          document.getElementById("googleBtnAnchor"),
-          { theme: "outline", size: "large", width: "340" },
-        );
-      }
-    };
-    if (window.google) {
-      initGoogle();
-    } else {
-      window.addEventListener("load", initGoogle);
-      return () => window.removeEventListener("load", initGoogle);
-    }
-  }, [auth]);
-  // First page load
-  useEffect(() => {
-    const displayGlobalData = async () => {
-      const data = await globalService.getGlobalData(auth.token);
-      global.setGlobalData(data);
-    };
-
-    displayGlobalData();
-  }, [global, auth]);
+    if (!auth.token || !auth.user) return;
+    loadInit();
+  }, [loadInit, auth.token, auth.user]);
 
   const handleLangChange = (lng) => {
     i18n.changeLanguage(lng);
-    //portfolio.setActivePortfolio(portfolio.activePortfolio);
   };
-
-  const getPortfolioAssets = useCallback(async () => {
-    const assets = await portfolioService.getPortfolioAssets(
-      auth.token,
-      portfolio.activePortfolio,
-    );
-    portfolio.setPortfolioAssets(assets);
-  }, [auth, portfolio]);
 
   const handlePortfolioChange = async (portfolio_id) => {
     portfolioService.updateSelected(portfolio_id, auth.token);
     portfolio.setActivePortfolio(portfolio_id);
+    portfolio.loadAssets(auth.token, portfolio_id);
   };
 
   const handleNewPortfolio = async () => {
     window.alert("New Portfolio");
   };
-
-  useEffect(() => {
-    const initFetch = async () => {
-      await getPortfolioAssets();
-    };
-    initFetch();
-
-    return;
-  }, [auth, getPortfolioAssets]);
 
   const handleInputChange = async (text) => {
     search.setSearchQuery(text);
@@ -148,7 +84,7 @@ function App() {
         `[${asset.symbol}] ${asset.name} was added successfully.`,
       );
 
-      getPortfolioAssets();
+      portfolio.loadAssets(auth.token);
     } catch (error) {
       search.setSearchMessage(`Error trying to add asset: ${error.message}`);
     }
@@ -162,52 +98,16 @@ function App() {
         symbol,
       );
 
-      getPortfolioAssets();
+      portfolio.loadAssets(auth.token);
     } catch (error) {
       setDebugLog(`Removal Failure: ${error.message}`);
-    }
-  };
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setAuthError("");
-    try {
-      const response = authService.register(username, email, password);
-      if (response.ok) {
-        setIsRegistering(false);
-        setPassword("");
-      } else {
-        setAuthError(response.error || "AUTHENTICATION_FAILED");
-      }
-    } catch (error) {
-      setAuthError(error.message);
-    }
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setAuthError("");
-    try {
-      const response = await authService.login(email, password);
-
-      if (!response.ok) {
-        throw new Error(response.error || "LOGIN_FAILED");
-      }
-
-      auth.completeLogin(response.user, response.token);
-
-      portfolio.setActivePortfolio(
-        auth.user.portfolios.find((p) => p.selected === 1).id,
-      );
-    } catch (error) {
-      setAuthError(error.message);
     }
   };
 
   const handleSignOut = () => {
     auth.completeLogout();
 
-    portfolio.clear();
+    portfolio.clearAssets();
     global.clear();
     search.clear();
 
@@ -219,7 +119,8 @@ function App() {
   };
 
   const onRefresh = () => {
-    getPortfolioAssets();
+    global.loadGlobalData(localStorage.getItem("mw_token"));
+    portfolio.loadAssets(localStorage.getItem("mw_token"));
   };
 
   const handleCoffeeDonation = () => {
@@ -230,18 +131,9 @@ function App() {
   if (!auth.token || !auth.user) {
     return (
       <LoginPage
-        username={username}
-        email={email}
-        password={password}
-        isRegistering={isRegistering}
-        setIsRegistering={setIsRegistering}
-        handleLogin={handleLogin}
-        handleRegister={handleRegister}
-        setUsername={setUsername}
-        setEmail={setEmail}
-        setPassword={setPassword}
-        authError={authError}
-        setAuthError={setAuthError}
+        auth={auth}
+        setActivePortfolio={portfolio.setActivePortfolio}
+        onRefresh={onRefresh}
         t={t}
       ></LoginPage>
     );
@@ -256,7 +148,6 @@ function App() {
         currentLang={i18n.language || "en"}
         t={t}
       />
-
       <div className="app-container">
         <GlobalTicker globalData={global.globalData} />
 
@@ -280,7 +171,7 @@ function App() {
               />
             </div>
             <Portfolios
-              user={auth.user}
+              auth={auth}
               handlePortfolioChange={handlePortfolioChange}
               handleNewPortfolio={handleNewPortfolio}
               activePortfolio={portfolio.activePortfolio}
@@ -308,6 +199,59 @@ function App() {
           setIsAboutOpen={setIsAboutOpen}
           handleCoffeeDonation={handleCoffeeDonation}
         ></PageFooter>
+      </div>
+      <div
+        style={{
+          fontSize: "16px",
+          color: "white",
+          marginTop: "10px",
+          marginLeft: "75px",
+        }}
+      >
+        {" "}
+        <table
+          style={{
+            borderCollapse: "collapse",
+            lineHeight: "1.5",
+            color: "#b4b9c1",
+          }}
+        >
+          <thead
+            style={{
+              textAlign: "left",
+              borderBottom: "1px solid #e1e5eb",
+            }}
+          >
+            <tr>
+              <th>Name</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ width: "190px" }}>Active Portfolio :</td>
+              <td style={{ width: "1800px", color: "#b4b9c1" }}>
+                {portfolio.activePortfolio}
+              </td>
+            </tr>
+            <tr style={{ margintop: "10px" }}>
+              <td>Assets : </td>
+              <td>{portfolio.portfolioAssets.length}</td>
+            </tr>
+            <tr style={{ verticalAlign: "top" }}>
+              <td>Local storage User :</td>
+              <td>{JSON.stringify(auth.user)}</td>
+            </tr>
+            <tr style={{ verticalAlign: "top" }}>
+              <td>Local storage Token :</td>
+              <td> {auth.token.substring(0, 20)} ...</td>
+            </tr>
+            <tr style={{ verticalAlign: "top" }}>
+              <td>Local storage Portfolio :</td>
+              <td> {JSON.stringify(auth.portfolio)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );

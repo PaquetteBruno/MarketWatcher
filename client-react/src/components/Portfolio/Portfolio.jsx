@@ -1,9 +1,4 @@
-function Portfolios({
-  user,
-  handlePortfolioChange,
-  handleNewPortfolio,
-  activePortfolio,
-}) {
+function Portfolios({ auth, handlePortfolioChange, handleNewPortfolio }) {
   return (
     <div
       style={{
@@ -15,20 +10,20 @@ function Portfolios({
         border: "1px solid #21262d",
       }}
     >
-      {user?.portfolios?.map((portfolio) => (
+      {auth?.user?.portfolios?.map((portfolio) => (
         <button
           key={portfolio.id}
           onClick={() => handlePortfolioChange(portfolio.id)}
           style={{
             flex: 1,
             background:
-              portfolio.id === activePortfolio ? "#21262d" : "transparent",
-            color: portfolio.id === activePortfolio ? "#58a6ff" : "#8b949e",
+              portfolio.id === auth.portfolio.id ? "#21262d" : "transparent",
+            color: portfolio.id === auth.portfolio.id ? "#58a6ff" : "#8b949e",
             borderRight: "1px solid gray",
             borderRadius: "6px",
             cursor: "pointer",
             fontSize: "18px",
-            fontWeight: portfolio.id === activePortfolio ? "600" : "500",
+            fontWeight: portfolio.id === auth.portfolio.id ? "600" : "500",
           }}
         >
           {portfolio.name}

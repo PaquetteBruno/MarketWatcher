@@ -11,11 +11,11 @@ const authService = {
     });
 
     const json = await response.json();
-    return json.data || [];
+    return json;
   },
 
   async login(email, password) {
-    const response = await fetch("http://localhost:5000/api/auth/register", {
+    const response = await fetch("http://localhost:5000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -25,7 +25,7 @@ const authService = {
     });
 
     const json = await response.json();
-    return json.data || [];
+    return json;
   },
 };
 

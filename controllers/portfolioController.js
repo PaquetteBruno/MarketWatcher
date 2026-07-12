@@ -108,6 +108,31 @@ export const addTransactionPosition = async (req, res) => {
   }
 };
 
+export const getActivePortfolio = async (req, res) => {
+  try {
+    const user_id = req.params.id;
+
+    const sql = `
+            SELECT * 
+              FROM portfolios 
+             WHERE user_id = ?
+               AND selected = 1
+        `;
+
+    const [portfolio] = await db.query(sql, [user_id]);
+
+    res.status(200).json({ data: portfolio });
+  } catch (error) {
+    console.error(
+      "controllers/portfolioController/getActivePortfolio: ",
+      error.message,
+    );
+    res
+      .status(500)
+      .json({ error: "DB_CONNECTION_ERROR", details: error.message });
+  }
+};
+
 // =========================================================================
 // 📋 RETRIEVE RECENT ACTIVE USER WATCHLIST SNAPSHOTS
 // =========================================================================
