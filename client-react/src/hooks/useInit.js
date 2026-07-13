@@ -1,20 +1,21 @@
 import { useCallback } from "react";
 
-export default function useInit(auth, global, portfolio) {
+export default function useInit(
+  token,
+  userId,
+  loadGlobalData,
+  loadActivePortfolio,
+  loadAssets,
+) {
   const load = useCallback(async () => {
-    console.log(auth.token, auth.user);
+    await loadGlobalData(token);
 
-    await global.loadGlobalData(auth.token);
+    const portfolioId = await loadActivePortfolio(token, userId);
 
-    const portfolioId = await portfolio.loadActivePortfolio(
-      auth.token,
-      auth.user.id,
-    );
-
-    await portfolio.loadAssets(auth.token, portfolioId);
+    await loadAssets(token, portfolioId);
 
     console.log("Loading application...");
-  }, [auth.token, auth.user?.id]);
+  }, [token, userId, loadGlobalData, loadActivePortfolio, loadAssets]);
 
   return load;
 }

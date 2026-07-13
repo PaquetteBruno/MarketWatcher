@@ -1,4 +1,7 @@
+import { useTranslation } from "react-i18next";
+
 function AboutPage({ setIsAboutOpen, handleCoffeeDonation }) {
+  const { t } = useTranslation();
   return (
     <div
       onClick={() => setIsAboutOpen(false)} // Clicking the dark background backdrop closes it
@@ -40,10 +43,10 @@ function AboutPage({ setIsAboutOpen, handleCoffeeDonation }) {
             lineHeight: "1.6",
             display: "flex",
             flexDirection: "column",
-            gap: "12px", // Slightly larger gap for readability
-            maxHeight: "600px", // 🌟 Caps the height so it doesn't leak out of the screen
-            overflowY: "auto", // 🌟 Automatically adds a scrollbar when content overflows
-            paddingRight: "18px", // Gutter space so text doesn't touch the scrollbar
+            gap: "12px",
+            maxHeight: "600px",
+            overflowY: "auto",
+            paddingRight: "18px",
             textAlign: "left",
           }}
         >
@@ -56,12 +59,11 @@ function AboutPage({ setIsAboutOpen, handleCoffeeDonation }) {
               textAlign: "center",
             }}
           >
-            About Market Watcher
+            {t("ABOUT_MARKET_WATCHER")}
           </h2>
           <p style={{ marginTop: "-15px" }}>
-            Welcome to <strong>Market Watcher</strong>, a personal multi-user
-            real-time trading dashboard built to aggregate financial movements
-            across the global economy.
+            {t("WELCOME_TO")} <strong>{t("MARKET_WATCHER")}</strong>,{" "}
+            {t("WELCOME_TO_ENDING")}
           </p>
 
           <h3
@@ -71,39 +73,31 @@ function AboutPage({ setIsAboutOpen, handleCoffeeDonation }) {
               marginBottom: "-15px",
             }}
           >
-            🚀 System Core Specifications
+            🚀 {t("SYSTEM_CORE_SPEC")}
           </h3>
           <ul style={{ paddingLeft: "20px" }}>
             <li>
-              <strong>Frontend Architecture:</strong> React SPA powered by
-              Vite's ultra-fast hot-reloading development compiler.
+              <strong>{t("FRONTEND_ARCH")}</strong>
+              {t("FRONTEND_ARCH_DESC")}
             </li>
             <li>
-              <strong>Backend Controller:</strong> Node.js & Express framework
-              executing secure REST API communication lines.
+              <strong>{t("BACKEND_CONT_ARCH")}</strong> {t("BACKEND_CONT_DESC")}
             </li>
             <li>
-              <strong>Data Synchronization:</strong> Live market evaluation
-              engines driven by the Yahoo Finance API.
+              <strong>{t("DATA_SYNC")}</strong> {t("DATA_SYNC_DESC")}
             </li>
             <li>
-              <strong>Relational Storage:</strong> Scalable local MySQL database
-              management caching historical parameters.
+              <strong>{t("RELATIONAL_STORAGE")}</strong>{" "}
+              {t("RELATIONAL_STORAGE_DESC")}
             </li>
             <li>
-              <strong>Access Security:</strong> Encrypted local user credentials
-              (via bcrypt) combined with secure Google Single Sign-On (SSO).
+              <strong>{t("ACCESS_SECURITY")}</strong>{" "}
+              {t("ACCESS_SECURITY_DESC")}
             </li>
           </ul>
 
-          <p style={{ marginTop: "-5px" }}>
-            This application was engineered as an educational environment to
-            master advanced full-stack integration patterns, state caching
-            loops, real-time animation hooks, and secure third-party
-            authentication middleware layers.
-          </p>
+          <p style={{ marginTop: "-5px" }}>{t("ABOUT_FINAL_TEXT")}</p>
 
-          {/* ☕ INTEGRATED LIVE PAYPAL LINK & DYNAMIC QR CODE CONTAINER */}
           <div
             style={{
               marginTop: "5px",
@@ -123,8 +117,7 @@ function AboutPage({ setIsAboutOpen, handleCoffeeDonation }) {
                 margin: "0 0 20px 0",
               }}
             >
-              If Market Watcher helped you in any way or you just enjoyed it,
-              consider supporting my server costs!
+              {t("IF_MARKET_WATCHER_HELPED")}
             </p>
 
             <div
@@ -135,7 +128,6 @@ function AboutPage({ setIsAboutOpen, handleCoffeeDonation }) {
                 gap: "20px",
               }}
             >
-              {/* The Yellow Clickable PayPal Gate Button */}
               <button
                 onClick={handleCoffeeDonation}
                 style={{
@@ -162,7 +154,7 @@ function AboutPage({ setIsAboutOpen, handleCoffeeDonation }) {
                   e.currentTarget.style.transform = "scale(1)";
                 }}
               >
-                ☕ Buy me a coffee via PayPal
+                ☕ {t("BUY_ME_A_COFFEE")}
               </button>
             </div>
           </div>

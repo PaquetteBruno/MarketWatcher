@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import i18n from "./i18n.js";
 import LoginPage from "./components/LoginPage/LoginPage";
@@ -20,8 +20,6 @@ import useInit from "./hooks/useInit";
 
 function App() {
   const t = (key) => i18n.t(key);
-  const timerRef = useRef(null);
-
   const [showConsole, setShowConsole] = useState(false);
   const [debugLog, setDebugLog] = useState("");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -30,7 +28,14 @@ function App() {
   const portfolio = usePortfolio();
   const global = useGlobal();
   const search = useSearch();
-  const loadInit = useInit(auth, global, portfolio);
+
+  const loadInit = useInit(
+    auth.token,
+    auth.user?.id,
+    global.loadGlobalData,
+    portfolio.loadActivePortfolio,
+    portfolio.loadAssets,
+  );
 
   console.log("App render");
 
@@ -50,7 +55,7 @@ function App() {
   };
 
   const handleNewPortfolio = async () => {
-    window.alert("New Portfolio");
+    window.alert(t("COMING_SOON"));
   };
 
   const handleInputChange = async (text) => {
@@ -81,12 +86,12 @@ function App() {
       );
 
       search.setSearchMessage(
-        `[${asset.symbol}] ${asset.name} was added successfully.`,
+        `[${asset.symbol}] ${asset.name} ${t("WAS_ADDED_SUCCESSFULLY")}`,
       );
 
-      portfolio.loadAssets(auth.token);
+      portfolio.loadAssets(auth.token, portfolio.activePortfolio);
     } catch (error) {
-      search.setSearchMessage(`Error trying to add asset: ${error.message}`);
+      search.setSearchMessage(`${t("ERROR_ADDING_ASSET")} ${error.message}`);
     }
   };
 
@@ -98,7 +103,7 @@ function App() {
         symbol,
       );
 
-      portfolio.loadAssets(auth.token);
+      portfolio.loadAssets(auth.token, portfolio.activePortfolio);
     } catch (error) {
       setDebugLog(`Removal Failure: ${error.message}`);
     }
@@ -111,16 +116,12 @@ function App() {
     global.clear();
     search.clear();
 
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
     setDebugLog("Sign out completed.");
   };
 
   const onRefresh = () => {
     global.loadGlobalData(localStorage.getItem("mw_token"));
-    portfolio.loadAssets(localStorage.getItem("mw_token"));
+    portfolio.loadAssets(auth.token, portfolio.activePortfolio);
   };
 
   const handleCoffeeDonation = () => {
@@ -130,35 +131,34 @@ function App() {
 
   if (!auth.token || !auth.user) {
     return (
-      <LoginPage
-        auth={auth}
-        setActivePortfolio={portfolio.setActivePortfolio}
-        onRefresh={onRefresh}
-        t={t}
-      ></LoginPage>
+      <div>
+        <UserBar
+          user={auth.user}
+          handleSignOut={handleSignOut}
+          handleLangChange={handleLangChange}
+        />
+        <LoginPage
+          auth={auth}
+          setActivePortfolio={portfolio.setActivePortfolio}
+          onRefresh={onRefresh}
+        ></LoginPage>
+      </div>
     );
   }
 
   return (
     <div>
       <UserBar
-        username={auth.user?.username}
+        user={auth.user}
         handleSignOut={handleSignOut}
         handleLangChange={handleLangChange}
-        currentLang={i18n.language || "en"}
-        t={t}
       />
       <div className="app-container">
         <GlobalTicker globalData={global.globalData} />
 
         <div style={{ display: "flex", gap: "2%", marginTop: "20px" }}>
           <div style={{ width: "calc(70% - 2%)" }}>
-            <PageHeader
-              smallIcon="📈"
-              title={t("TITLE")}
-              onRefresh={onRefresh}
-              t={t}
-            />
+            <PageHeader onRefresh={onRefresh} />
             <div className="content-layout">
               <SearchBar
                 user={auth.user}
@@ -167,7 +167,6 @@ function App() {
                 searchMessage={search.searchMessage}
                 handleInputChange={handleInputChange}
                 handleSelectAsset={handleSelectAsset}
-                t={t}
               />
             </div>
             <Portfolios
@@ -179,15 +178,11 @@ function App() {
             <AssetList
               portfolioAssets={portfolio.portfolioAssets}
               removeAssetFromPortfolio={removeAssetFromPortfolio}
-              t={t}
             ></AssetList>
             )
           </div>
           <div style={{ width: "30%", fontSize: "24px" }}>
-            <SideBar
-              smallIcon="📋"
-              title={t("Positions (Future update)")}
-            ></SideBar>
+            <SideBar></SideBar>
           </div>
         </div>
 
@@ -199,59 +194,6 @@ function App() {
           setIsAboutOpen={setIsAboutOpen}
           handleCoffeeDonation={handleCoffeeDonation}
         ></PageFooter>
-      </div>
-      <div
-        style={{
-          fontSize: "16px",
-          color: "white",
-          marginTop: "10px",
-          marginLeft: "75px",
-        }}
-      >
-        {" "}
-        <table
-          style={{
-            borderCollapse: "collapse",
-            lineHeight: "1.5",
-            color: "#b4b9c1",
-          }}
-        >
-          <thead
-            style={{
-              textAlign: "left",
-              borderBottom: "1px solid #e1e5eb",
-            }}
-          >
-            <tr>
-              <th>Name</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ width: "190px" }}>Active Portfolio :</td>
-              <td style={{ width: "1800px", color: "#b4b9c1" }}>
-                {portfolio.activePortfolio}
-              </td>
-            </tr>
-            <tr style={{ margintop: "10px" }}>
-              <td>Assets : </td>
-              <td>{portfolio.portfolioAssets.length}</td>
-            </tr>
-            <tr style={{ verticalAlign: "top" }}>
-              <td>Local storage User :</td>
-              <td>{JSON.stringify(auth.user)}</td>
-            </tr>
-            <tr style={{ verticalAlign: "top" }}>
-              <td>Local storage Token :</td>
-              <td> {auth.token.substring(0, 20)} ...</td>
-            </tr>
-            <tr style={{ verticalAlign: "top" }}>
-              <td>Local storage Portfolio :</td>
-              <td> {JSON.stringify(auth.portfolio)}</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
   );

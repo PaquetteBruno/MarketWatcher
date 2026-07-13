@@ -1,23 +1,8 @@
-/**
- * UserBar
- *
- * Responsibility:
- * Displays the top section of the application.
- *
- * Receives:
- * To be defined.
- *
- * Does NOT:
- * To be defined.
- */
+import { useTranslation } from "react-i18next";
 
-function UserBar({
-  username,
-  handleSignOut,
-  handleLangChange,
-  currentLang,
-  t,
-}) {
+function UserBar({ user, handleSignOut, handleLangChange }) {
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || "en";
   return (
     <div
       style={{
@@ -51,7 +36,7 @@ function UserBar({
             height: "16px",
             borderRadius: "2px",
             cursor: "pointer",
-            opacity: currentLang === "en" ? 1 : 0.75, // 👈 BRIGHTER STANDBY OPACITY (0.55 instead of 0.3)
+            opacity: currentLang === "en" ? 1 : 0.75,
             transform: currentLang === "en" ? "scale(1.15)" : "scale(1)",
             transition: "opacity 0.2s, transform 0.2s",
             boxShadow:
@@ -76,7 +61,7 @@ function UserBar({
             height: "16px",
             borderRadius: "2px",
             cursor: "pointer",
-            opacity: currentLang === "fr" ? 1 : 0.75, // 👈 BRIGHTER STANDBY OPACITY
+            opacity: currentLang === "fr" ? 1 : 0.75,
             transform: currentLang === "fr" ? "scale(1.15)" : "scale(1)",
             transition: "opacity 0.2s, transform 0.2s",
             boxShadow:
@@ -101,7 +86,7 @@ function UserBar({
             height: "16px",
             borderRadius: "2px",
             cursor: "pointer",
-            opacity: currentLang === "es" ? 1 : 0.75, // 👈 BRIGHTER STANDBY OPACITY
+            opacity: currentLang === "es" ? 1 : 0.75,
             transform: currentLang === "es" ? "scale(1.15)" : "scale(1)",
             transition: "opacity 0.2s, transform 0.2s",
             boxShadow:
@@ -114,42 +99,48 @@ function UserBar({
             if (currentLang !== "es") e.currentTarget.style.opacity = "0.55";
           }}
         />
-        <span
-          style={{
-            fontSize: "13px",
-            color: "#8b949e",
-            marginLeft: "10px",
-            marginRight: "10px",
-            marginTop: "0px",
-          }}
-        >
-          <strong style={{ color: "#58a6ff" }}>{username || "Guest"}</strong>
-        </span>
-        <button
-          onClick={() => {
-            console.log("Sign out proxy initiated.");
-            if (typeof handleSignOut === "function") {
-              handleSignOut();
-            } else {
-              alert(
-                "Error: handleSignOut is not being passed correctly as a function! It is currently: " +
-                  typeof handleSignOut,
-              );
-            }
-          }}
-          style={{
-            background: "transparent",
-            color: "#58a6ff",
-            border: "1px solid #58a6ff",
-            padding: "3px 8px",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "11px",
-            fontWeight: "600",
-          }}
-        >
-          {t("SIGN_OUT")}
-        </button>
+        {user && (
+          <>
+            <span
+              style={{
+                fontSize: "13px",
+                color: "#8b949e",
+                marginLeft: "10px",
+                marginRight: "10px",
+                marginTop: "0px",
+              }}
+            >
+              <strong style={{ color: "#58a6ff" }}>
+                {user?.username || "Guest"}
+              </strong>
+            </span>
+            <button
+              onClick={() => {
+                console.log("Sign out proxy initiated.");
+                if (typeof handleSignOut === "function") {
+                  handleSignOut();
+                } else {
+                  alert(
+                    "Error: handleSignOut is not being passed correctly as a function! It is currently: " +
+                      typeof handleSignOut,
+                  );
+                }
+              }}
+              style={{
+                background: "transparent",
+                color: "#58a6ff",
+                border: "1px solid #58a6ff",
+                padding: "3px 8px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "11px",
+                fontWeight: "600",
+              }}
+            >
+              {t("SIGN_OUT")}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

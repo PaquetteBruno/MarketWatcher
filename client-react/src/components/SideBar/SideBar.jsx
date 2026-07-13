@@ -1,4 +1,7 @@
-function SideBar({ smallIcon, title }) {
+import { useTranslation } from "react-i18next";
+
+function SideBar() {
+  const { t } = useTranslation();
   return (
     <div>
       <h1
@@ -8,7 +11,7 @@ function SideBar({ smallIcon, title }) {
           fontSize: "24px",
         }}
       >
-        {smallIcon} {title}
+        📋 {t("SIDEBAR_TITLE")}
       </h1>
     </div>
   );

@@ -1,15 +1,11 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
-import bcrypt from "bcryptjs"; // 👍 Imported bcryptjs to securely hash local accounts
+import bcrypt from "bcryptjs";
 
-// Initialize Google OAuth2 client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// =========================================================================
-// USER REGISTRATION CONTROLLER ACTION
-// =========================================================================
-export const registerUser = async (req, res) => {
+export const registerUser = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
 
@@ -17,8 +13,8 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ error: "MISSING_REQUIRED_FIELDS" });
     }
 
-    const emailExists = await User.findByEmail(email);
-    const usernameExists = await User.findByUsername(username);
+    const emailExists = await User.getByEmail(email);
+    const usernameExists = await User.getByUsername(username);
 
     if (emailExists || usernameExists) {
       return res.status(409).json({ error: "USER_ALREADY_EXISTS" });
@@ -37,18 +33,12 @@ export const registerUser = async (req, res) => {
       message: "USER_REGISTERED_SUCCESSFULLY",
       user: { id: userId, username, email },
     });
-  } catch (error) {
-    console.error("Controller Registration Exception Loop:", error.message);
-    res
-      .status(500)
-      .json({ error: "INTERNAL_SERVER_ERROR", details: error.message });
+  } catch (err) {
+    next(err);
   }
 };
 
-// =========================================================================
-// USER LOGIN / REFRESH TOKEN CONTROLLER ACTION
-// =========================================================================
-export const loginUser = async (req, res) => {
+export const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -56,7 +46,7 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ error: "MISSING_REQUIRED_FIELDS" });
     }
 
-    const user = await User.findByEmail(email);
+    const user = await User.getByEmail(email);
 
     if (!user) {
       return res.status(401).json({ error: "AUTH_INVALID_CREDENTIALS" });
@@ -97,18 +87,12 @@ export const loginUser = async (req, res) => {
         portfolios: portfolios,
       },
     });
-  } catch (error) {
-    console.error("Controller Login Exception Loop:", error.message);
-    res
-      .status(500)
-      .json({ error: "INTERNAL_SERVER_ERROR", details: error.message });
+  } catch (err) {
+    next(err);
   }
 };
 
-// =========================================================================
-// SECURE GOOGLE OAUTH AUTHENTICATION CONTROLLER ACTION
-// =========================================================================
-export const googleLoginUser = async (req, res) => {
+export const googleLoginUser = async (req, res, next) => {
   try {
     const { idToken } = req.body;
     if (!idToken) {
@@ -129,15 +113,13 @@ export const googleLoginUser = async (req, res) => {
       return res.status(400).json({ error: "GOOGLE_AUTH_EMAIL_MISSING" });
     }
 
-    let user = await User.findByEmail(email);
+    let user = await User.getByEmail(email);
 
     if (!user) {
       const generatedUsername = name
         ? name.toLowerCase().replace(/\s+/g, "_")
         : `user_${Date.now()}`;
 
-      // Note: Random placeholder tokens for social log-ins don't need manual salting since
-      // passwords aren't the validation vector, but we hash it here to match structural database rules cleanly
       const randomPasswordPlaceholder = `google_oauth_lock_${Math.random().toString(36).slice(-8)}`;
       const hashedPlaceholder = await bcrypt.hash(
         randomPasswordPlaceholder,
@@ -149,7 +131,7 @@ export const googleLoginUser = async (req, res) => {
         email: email,
         password: hashedPlaceholder,
       });
-      user = await User.findById(userId);
+      user = await User.getById(userId);
     }
 
     const sessionToken = jwt.sign(
@@ -174,12 +156,7 @@ export const googleLoginUser = async (req, res) => {
         portfolios: portfolios,
       },
     });
-  } catch (error) {
-    // Fixed properties typo -> error.message (was error.messsage)
-    console.error("Controller Google Login Verification Error:", error.message);
-    res.status(500).json({
-      error: "GOOGLE_AUTH_VERIFICATION_FAILED",
-      details: error.message,
-    });
+  } catch (err) {
+    next(err);
   }
 };

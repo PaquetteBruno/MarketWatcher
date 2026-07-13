@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 function SearchBar({
   user,
   searchQuery,
@@ -5,8 +7,9 @@ function SearchBar({
   searchMessage,
   handleInputChange,
   handleSelectAsset,
-  t,
 }) {
+  const { t } = useTranslation();
+
   return (
     <div style={{ position: "relative", width: "100%" }}>
       <input

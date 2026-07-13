@@ -1,4 +1,8 @@
-function AssetList({ portfolioAssets, removeAssetFromPortfolio, t }) {
+import { useTranslation } from "react-i18next";
+
+function AssetList({ portfolioAssets, removeAssetFromPortfolio }) {
+  const { t } = useTranslation();
+
   return (
     <div
       style={{
@@ -23,8 +27,8 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio, t }) {
             <tr
               style={{
                 borderBottom: "1px solid #30363d",
-                color: "#8b949e",
                 fontSize: "13px",
+                color: "#86acd7",
               }}
             >
               <th style={{ padding: "12px 12px", width: "15%" }}>
@@ -36,7 +40,13 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio, t }) {
               <th style={{ padding: "12px 12px", width: "20%" }}>
                 {t("TYPE")}
               </th>
-              <th style={{ padding: "12px 12px", width: "15%" }}>
+              <th
+                style={{
+                  padding: "12px 12px",
+                  width: "15%",
+                  textAlign: "right",
+                }}
+              >
                 {t("PRICE")}
               </th>
               <th
@@ -46,7 +56,7 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio, t }) {
                   textAlign: "right",
                 }}
               >
-                {t("CHANGE")}
+                24h {t("CHANGE")}
               </th>
               <th style={{ padding: "12px 12px", width: "5%" }}></th>
             </tr>
@@ -96,7 +106,7 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio, t }) {
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       padding: "6px 12px",
-                      color: "#8b949e",
+                      color: "#ffffff",
                       fontSize: "12px",
                       textTransform: "uppercase",
                     }}
@@ -111,6 +121,7 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio, t }) {
                       padding: "6px 12px",
                       color: "#ffffff",
                       fontFamily: "monospace",
+                      textAlign: "right",
                     }}
                   >
                     $
@@ -165,7 +176,7 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio, t }) {
             color: "#8b949e",
           }}
         >
-          Nothing to display.
+          {t("EMPTY_LIST")}
         </div>
       )}
     </div>

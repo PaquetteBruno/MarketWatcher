@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import AboutPage from "../AboutPage/AboutPage";
+import { useTranslation } from "react-i18next";
 
 function PageFooter({
   debugLog,
@@ -9,52 +9,12 @@ function PageFooter({
   setIsAboutOpen,
   handleCoffeeDonation,
 }) {
-  useEffect(() => {
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (error) {
-      console.warn("GOOGLE_ADSENSE_ERROR", error.message);
-    }
-  }, []);
-
+  const { t } = useTranslation();
   return (
     <div>
-      <div
-        style={{
-          margin: "40px auto 10px auto",
-          padding: "15px",
-          background: "#161b22",
-          border: "1px dashed #30363d",
-          borderRadius: "8px",
-          width: "100%",
-          textAlign: "center",
-          overflow: "hidden",
-          boxSizing: "border-box",
-        }}
-      >
-        <span
-          style={{
-            display: "block",
-            fontSize: "10px",
-            color: "#8b949e",
-            marginBottom: "10px",
-            letterSpacing: "1px",
-            textTransform: "uppercase",
-          }}
-        >
-          Advertisement
-        </span>
-
-        <ins
-          className="adsbygoogle"
-          style={{ display: "block" }}
-          data-ad-client="pub-1158075273498343"
-          data-ad-slot="7260832859"
-          data-ad-format="auto"
-          data-full-width-responsive="true"
-        ></ins>
-      </div>
-
+      <hr
+        style={{ height: "1px", backgroundColor: "#22262d", border: "none" }}
+      />
       <div
         style={{
           marginTop: "20px",
@@ -83,7 +43,7 @@ function PageFooter({
                 fontSize: "12px",
               }}
             >
-              About
+              {t("ABOUT")}
             </button>
           </div>
 

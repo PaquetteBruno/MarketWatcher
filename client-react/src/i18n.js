@@ -1,5 +1,5 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
 
 // 🌐 MULTI-LANGUAGE DICTIONARY TRANSLATION DICTS (EN, FR, ES)
 const resources = {
@@ -11,6 +11,7 @@ const resources = {
       USERNAME: "Username",
       EMAIL: "Email",
       PASSWORD: "Password",
+      CONFIRM_PASSWORD: "Confirm Password",
       SIGN_IN: "Sign In",
       REGISTER_ACCOUNT: "Register Account",
       HAVE_ACCOUNT: "Have an account?",
@@ -19,7 +20,8 @@ const resources = {
       LOG_IN_AS: "Logged in as:",
       SIGN_OUT: "Sign Out",
       SEARCH_ASSETS: "Search Assets",
-      SEARCH_PLACEHOLDER: "Search an asset by symbol or company name (e.g. BTC, Apple, NVDA, Microsoft)",
+      SEARCH_PLACEHOLDER:
+        "Search an asset by symbol or company name (e.g. BTC, Apple, NVDA, Microsoft)",
       TAB_WATCHLIST: "⭐ My Watchlist",
       TAB_CRYPTO: "Crypto",
       TAB_ABOUT: "ℹ️ About",
@@ -44,13 +46,47 @@ const resources = {
       AUTH_EMAIL_TAKEN: "This email is already taken.",
       GOOGLE_VERIFICATION_FAILED: "Google verification failed.",
       GOOGLE_ACCOUNT_CREATED: "Google account created",
-      ACCOUNT_SUCCESSFULLY_GENERATED: "Account was created successfully, proceed to sign in.",
+      ACCOUNT_SUCCESSFULLY_GENERATED:
+        "Account was created successfully, proceed to sign in.",
       MISSING_FIELDS: "Some fields are missing.",
       ASSET_SUCCESSFULLY_ADDED: "Asset successfully added to your list.",
       ASSET_SUCCESSFULLY_REMOVED: "Asset successfully removed from your list.",
-      GOOGLE_ADSENSE_ERROR: "Error generating Google AdSense."
-      
-    }
+      GOOGLE_ADSENSE_ERROR: "Error generating Google AdSense.",
+      SIDEBAR_TITLE: "Positions - Future update",
+      SYMBOL: "SYMBOL",
+      NAME: "NAME",
+      TYPE: "TYPE",
+      PRICE: "PRICE",
+      CHANGE: "CHANGE",
+      ABOUT: "ABOUT",
+      WELCOME_TO: "Welcome to ",
+      MARKET_WATCHER: "Market Watcher",
+      WELCOME_TO_ENDING:
+        ", a personal multi-user real-time trading dashboard built to aggregate financial movements across the global economy.",
+      SYSTEM_CORE_SPEC: "System Core Specifications",
+      FRONTEND_ARCH: "Frontend Architecture: ",
+      FRONTEND_ARCH_DESC: `React SPA powered by Vite's ultra-fast hot-reloading development compiler.`,
+      BACKEND_CONT_ARCH: "Backend Controller: ",
+      BACKEND_CONT_DESC: `Node.js & Express framework executing secure REST API communication lines.`,
+      DATA_SYNC: "Data Synchronization: ",
+      DATA_SYNC_DESC: `Live market evaluation engines driven by the Yahoo Finance API.`,
+      ABOUT_FINAL_TEXT:
+        "This application was engineered as an educational environment to master advanced full-stack integration patterns, state caching loops, real-time animation hooks, and secure third-party authentication middleware layers",
+      IF_MARKET_WATCHER_HELPED:
+        "If Market Watcher helped you in any way or you just enjoyed it, consider supporting my server costs!",
+      BUY_ME_A_COFFEE: "Buy me a coffee via PayPal",
+      RELATIONAL_STORAGE: "Relational Storage: ",
+      RELATIONAL_STORAGE_DESC: `Scalable local MySQL database management caching historical parameters.`,
+      ACCESS_SECURITY: "Access Security: ",
+      ACCESS_SECURITY_DESC: `Encrypted local user credentials (via bcrypt) combined with secure Google Single Sign-On (SSO)`,
+      WAS_ADDED_SUCCESSFULLY: "Was added successfully.",
+      ERROR_ADDING_ASSET: "Error trying to add asset: ",
+      ABOUT_MARKET_WATCHER: "About Market Watcher",
+      REFRESH: "REFRESH",
+      EMPTY_LIST: "List of assets empty",
+      TYPE_YOUR_USERNAME: "Type in your username",
+      COMING_SOON: "Coming Soon",
+    },
   },
   fr: {
     translation: {
@@ -60,6 +96,7 @@ const resources = {
       USERNAME: "Nom d'utilisateur",
       EMAIL: "Courriel",
       PASSWORD: "Mot de passe",
+      CONFIRM_PASSWORD: "Confirmer le mot de passe",
       SIGN_IN: "Se connecter",
       REGISTER_ACCOUNT: "Enregistrer le compte",
       HAVE_ACCOUNT: "Vous avez déjà un compte ?",
@@ -68,7 +105,8 @@ const resources = {
       LOG_IN_AS: "Connecté en tant que :",
       SIGN_OUT: "Déconnexion",
       SEARCH_ASSETS: "Rechercher des actifs",
-      SEARCH_PLACEHOLDER: "Symbole de l'actif ou nom de l'entreprise (ex: BTC, Apple, NVDA)",
+      SEARCH_PLACEHOLDER:
+        "Symbole de l'actif ou nom de l'entreprise (ex: BTC, Apple, NVDA)",
       TAB_WATCHLIST: "⭐ Ma Liste",
       TAB_CRYPTO: "Crypto",
       TAB_ABOUT: "ℹ️ À Propos",
@@ -80,8 +118,42 @@ const resources = {
       EMPTY_VIEW: "Rien à afficher.",
       SHOW_CONSOLE: "Afficher la console",
       HIDE_CONSOLE: "Masquer la console",
-      CONSOLE_TITLE: "🖥️ Console d'analyse système"
-    }
+      CONSOLE_TITLE: "🖥️ Console d'analyse système",
+      SIDEBAR_TITLE: "Positions - Future Mise à jour",
+      SYMBOL: "SYMBOLE",
+      NAME: "NOM",
+      TYPE: "TYPE",
+      PRICE: "PRIX",
+      CHANGE: "VARIATION",
+      ABOUT: "À PROPOS",
+      WELCOME_TO: "Bienvenue sur ",
+      MARKET_WATCHER: "Market Watcher",
+      WELCOME_TO_ENDING:
+        ", un tableau de bord de trading en temps réel, personnel et multi-utilisateur, conçu pour agréger les mouvements financiers de l'économie mondiale.",
+      SYSTEM_CORE_SPEC: "Spécifications de base du système",
+      FRONTEND_ARCH: "Architecture Frontend : ",
+      FRONTEND_ARCH_DESC: `SPA React alimentée par le compilateur de développement ultra-rapide avec hot-reloading de Vite.`,
+      BACKEND_CONT_ARCH: "Contrôleur Backend : ",
+      BACKEND_CONT_DESC: `Framework Node.js & Express exécutant des lignes de communication API REST sécurisées.`,
+      DATA_SYNC: "Synchronisation des données : ",
+      DATA_SYNC_DESC: `Moteurs d'évaluation du marché en direct propulsés par l'API Yahoo Finance.`,
+      ABOUT_FINAL_TEXT:
+        "Cette application a été conçue comme un environnement pédagogique pour maîtriser les modèles d'intégration full-stack avancés, les boucles de mise en cache d'état, les hooks d'animation en temps réel et les couches de middleware d'authentification tierce sécurisées.",
+      IF_MARKET_WATCHER_HELPED:
+        "Si Market Watcher vous a aidé d'une manière ou d'une autre ou si vous l'avez simplement apprécié, pensez à soutenir les coûts de mon serveur !",
+      BUY_ME_A_COFFEE: "Offrez-moi un café via PayPal",
+      RELATIONAL_STORAGE: "Stockage relationnel : ",
+      RELATIONAL_STORAGE_DESC: `Base de données MySQL locale et évolutive mettant en cache les paramètres historiques.`,
+      ACCESS_SECURITY: "Sécurité des accès : ",
+      ACCESS_SECURITY_DESC: `Identifiants utilisateurs locaux cryptés (via bcrypt) combinés à la connexion unique sécurisée (SSO) de Google.`,
+      WAS_ADDED_SUCCESSFULLY: "A été ajouté avec succès.",
+      ERROR_ADDING_ASSET: "Erreur lors de l'ajout de l'actif : ",
+      ABOUT_MARKET_WATCHER: "À propos de Market Watcher",
+      REFRESH: "ACTUALISER",
+      EMPTY_LIST: "Liste d'actifs vide",
+      TYPE_YOUR_USERNAME: "Saisissez votre nom d'utilisateur",
+      COMING_SOON: "Bientôt disponible",
+    },
   },
   es: {
     translation: {
@@ -91,6 +163,7 @@ const resources = {
       USERNAME: "Nombre de usuario",
       EMAIL: "Correo electrónico",
       PASSWORD: "Contraseña",
+      CONFIRM_PASSWORD: "Confirmar contraseña",
       SIGN_IN: "Iniciar Sesión",
       REGISTER_ACCOUNT: "Registrar Cuenta",
       HAVE_ACCOUNT: "¿Ya tienes una cuenta?",
@@ -99,7 +172,8 @@ const resources = {
       LOG_IN_AS: "Conectado como:",
       SIGN_OUT: "Cerrar Sesión",
       SEARCH_ASSETS: "Buscar Activos",
-      SEARCH_PLACEHOLDER: "Símbolo del activo o nombre de la empresa (ej: BTC, Apple, NVDA)",
+      SEARCH_PLACEHOLDER:
+        "Símbolo del activo o nombre de la empresa (ej: BTC, Apple, NVDA)",
       TAB_WATCHLIST: "⭐ Mi Lista",
       TAB_CRYPTO: "Cripto",
       TAB_ABOUT: "ℹ️ Acerca de",
@@ -111,18 +185,50 @@ const resources = {
       EMPTY_VIEW: "Nada que mostrar.",
       SHOW_CONSOLE: "Mostrar Consola",
       HIDE_CONSOLE: "Ocultar Consola",
-      CONSOLE_TITLE: "🖥️ Consola de diagnóstico del sistema"
-    }
-  }
+      CONSOLE_TITLE: "🖥️ Consola de diagnóstico del sistema",
+      SIDEBAR_TITLE: "Posiciones - Futura actualización",
+      SYMBOL: "SÍMBOLO",
+      NAME: "NOMBRE",
+      TYPE: "TIPO",
+      PRICE: "PRECIO",
+      CHANGE: "VARIACIÓN",
+      ABOUT: "ACERCA DE",
+      WELCOME_TO: "Bienvenido a ",
+      MARKET_WATCHER: "Market Watcher",
+      WELCOME_TO_ENDING:
+        ", un panel de control de trading en tiempo real, personal y multiusuario, diseñado para agregar los movimientos financieros de la economía global.",
+      SYSTEM_CORE_SPEC: "Especificaciones del núcleo del sistema",
+      FRONTEND_ARCH: "Arquitectura Frontend: ",
+      FRONTEND_ARCH_DESC: `SPA de React impulsada por el compilador de desarrollo ultra rápido con hot-reloading de Vite.`,
+      BACKEND_CONT_ARCH: "Controlador Backend: ",
+      BACKEND_CONT_DESC: `Framework de Node.js y Express que ejecuta líneas de comunicación de API REST seguras.`,
+      DATA_SYNC: "Sincronización de datos: ",
+      DATA_SYNC_DESC: `Motores de evaluación del mercado en vivo impulsados por la API de Yahoo Finance.`,
+      ABOUT_FINAL_TEXT:
+        "Esta aplicación fue diseñada como un entorno educativo para dominar patrones avanzados de integración full-stack, bucles de almacenamiento en caché de estado, hooks de animación en tiempo real y capas de middleware de autenticación de terceros seguras.",
+      IF_MARKET_WATCHER_HELPED:
+        "Si Market Watcher te ayudó de alguna manera o simplemente lo disfrutaste, ¡considera apoyar los costos de mi servidor!",
+      BUY_ME_A_COFFEE: "Invítame a un café vía PayPal",
+      RELATIONAL_STORAGE: "Almacenamiento relacional: ",
+      RELATIONAL_STORAGE_DESC: `Base de datos local escalable de MySQL que almacena en caché parámetros históricos.`,
+      ACCESS_SECURITY: "Seguridad de acceso: ",
+      ACCESS_SECURITY_DESC: `Credenciales de usuario locales encriptadas (vía bcrypt) combinadas con el inicio de sesión único (SSO) seguro de Google.`,
+      WAS_ADDED_SUCCESSFULLY: "Se agregó con éxito.",
+      ERROR_ADDING_ASSET: "Error al intentar agregar el activo: ",
+      ABOUT_MARKET_WATCHER: "Acerca de Market Watcher",
+      REFRESH: "ACTUALIZAR",
+      EMPTY_LIST: "Lista de activos vacía",
+      TYPE_YOUR_USERNAME: "Escribe tu nombre de usuario",
+      COMING_SOON: "Próximamente",
+    },
+  },
 };
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources,
-    lng: 'en', // Baseline standard startup language configuration
-    fallbackLng: 'en',
-    interpolation: { escapeValue: false }
-  });
+i18n.use(initReactI18next).init({
+  resources,
+  lng: "en", // Baseline standard startup language configuration
+  fallbackLng: "en",
+  interpolation: { escapeValue: false },
+});
 
 export default i18n;

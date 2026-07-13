@@ -1,4 +1,8 @@
-function PageHeader({ smallIcon, title, onRefresh, t }) {
+import { useTranslation } from "react-i18next";
+
+function PageHeader({ onRefresh }) {
+  const { t } = useTranslation();
+
   return (
     <header
       style={{
@@ -18,7 +22,7 @@ function PageHeader({ smallIcon, title, onRefresh, t }) {
             fontSize: "24px",
           }}
         >
-          {smallIcon} {title}
+          📈 {t("TITLE")}
         </h1>
       </div>
       <div
