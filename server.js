@@ -5,13 +5,11 @@ import swaggerUi from "swagger-ui-express";
 import "express-list-endpoints";
 import errorHandler from "./middleware/errorHandler.js";
 
-// 🔌 IMPORT YOUR LOGICAL ROUTER ARCHITECTURE
 import { specs } from "./config/swagger.js";
 import authRoutes from "./routes/auth.js";
 import globalRoutes from "./routes/global.js";
 import portfolioRoutes from "./routes/portfolio.js";
 import searchRoutes from "./routes/search.js";
-import userRoutes from "./routes/user.js";
 import logger from "./config/logger.js";
 
 dotenv.config();
@@ -37,7 +35,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/global", globalRoutes);
 app.use("/api/portfolio", portfolioRoutes);
 app.use("/api/search", searchRoutes);
-app.use("/api/user", userRoutes);
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;

@@ -9,13 +9,15 @@ export function usePortfolio() {
     setPortfolioAssets([]);
   }, []);
 
-  const loadActivePortfolio = useCallback(async (token, user_id) => {
-    const portfolio = await portfolioService.getActivePortfolio(token, user_id);
-    const id = portfolio.id;
+  const loadActivePortfolio = useCallback(async (token, userId) => {
+    const portfolioId = await portfolioService.getSelectedPortfolio(
+      token,
+      userId,
+    );
 
-    setActivePortfolio(id);
+    setActivePortfolio(portfolioId);
 
-    return id;
+    return portfolioId;
   }, []);
 
   const loadAssets = useCallback(async (token, portfolioId) => {

@@ -1,19 +1,113 @@
 import Asset from "../models/Asset.js";
 import Portfolio from "../models/Portfolio.js";
-import Position from "../models/Position.js";
 
-export const addAssetToPortfolio = async (req, res, next) => {
+// get a single portfolio by id
+export const getPortfolio = async (req, res, next) => {
   try {
-    const { portfolio_id, symbol, name, type, price, price_change } = req.body;
+    const portfolioID = req.params.portfolioId;
 
-    if (!portfolio_id || !symbol) {
+    const portfolio = await Portfolio.getPortfolio(portfolioID);
+
+    res.status(200).json({ data: portfolio });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// get a single portfolio by id
+export const getSelectedPortfolio = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+
+    const portfolio = await Portfolio.getSelectedPortfolio(userId);
+
+    res.status(200).json({ data: portfolio });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// get all portfolios from current user
+export const getPortfolios = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+
+    const portfolios = await Portfolio.getPortfolios(userId);
+
+    res.status(200).json({ data: portfolios });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// create a new portfolio for the current user
+export const createPortfolio = async (req, res, next) => {
+  try {
+    const { userId, name, isSelected } = req.params;
+
+    const result = await Portfolio.createPortfolio(userId, name, isSelected);
+
+    req.status(200).json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// rename a portfolio by id
+export const updatePortfolio = async (req, res, next) => {
+  try {
+    const { portfolioId, name, isSelected } = req.params;
+
+    const result = await Portfolio.createPortfolio(
+      portfolioId,
+      name,
+      isSelected,
+    );
+
+    req.status(200).json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// delete a portfolio by id
+export const deletePortfolio = async (req, res, next) => {
+  try {
+    const portfolioId = req.params.id;
+    const [result] = await Portfolio.deletePortfolio(portfolioId);
+
+    res.status(200).json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// get all assets for a portfolio
+export const getPortfolioAssets = async (req, res, next) => {
+  try {
+    const portfolioId = req.params.portfolioId;
+
+    const [assets] = await Portfolio.getPortfolioAssets(portfolioId);
+
+    res.status(200).json({ data: assets });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// add an asset to a portfolio
+export const createPortfolioAsset = async (req, res, next) => {
+  try {
+    const { portfolioId, symbol, name, type, price, price_change } = req.body;
+
+    if (!portfolioId || !symbol) {
       return res.status(400).json({ error: "MISSING_REQUIRED_FIELDS" });
     }
 
-    let asset_id = await Asset.getIdBySymbol(symbol);
+    let assetId = await Asset.getIdBySymbol(symbol);
 
-    if (!asset_id) {
-      asset_id = await Asset.create({
+    if (!assetId) {
+      assetId = await Asset.create({
         symbol,
         name,
         type,
@@ -22,7 +116,7 @@ export const addAssetToPortfolio = async (req, res, next) => {
       });
     }
 
-    await Portfolio.addAssetToPortfolio(portfolio_id, asset_id);
+    await Portfolio.createPortfolioAsset(portfolioId, assetId);
 
     res.status(201).json({
       message: "ASSET_SUCCESSFULLY_ADDED",
@@ -32,86 +126,17 @@ export const addAssetToPortfolio = async (req, res, next) => {
   }
 };
 
-export const updateSelectedPortfolio = async (req, res, next) => {
+// remove an asset from a portfolio
+export const deletePortfolioAsset = async (req, res, next) => {
   try {
-    const { portfolio_id } = req.body;
+    const { portfolioId, symbol } = req.body;
 
-    await Portfolio.updateSelectedPortfolio(portfolio_id);
-
-    res.status(201).json({
-      message: "SELECTED_PORTFOLIO_CHANGED",
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const removeAssetFromPortfolio = async (req, res, next) => {
-  try {
-    const { portfolio_id, symbol } = req.body;
-
-    await Portfolio.removeAssetFromPortfolio(portfolio_id, symbol);
+    await Portfolio.deletePortfolioAsset(portfolioId, symbol);
 
     res.status(201).json({
       message: "ASSET_SUCCESSFULLY_REMOVED",
-      data: { portfolio_id, symbol },
+      data: { portfolioId, symbol },
     });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const addTransactionPosition = async (req, res, next) => {
-  try {
-    const { portfolio_asset_id, quantity, purchase_price } = req.body;
-
-    const qty = parseFloat(quantity);
-    const price = parseFloat(purchase_price);
-
-    if (
-      !portfolio_asset_id ||
-      isNaN(qty) ||
-      qty <= 0 ||
-      isNaN(price) ||
-      price < 0
-    ) {
-      return res.status(400).json({ error: "INVALID_QUANTITY_OR_PRICE" });
-    }
-
-    const positionId = await Position.create({
-      portfolioAssetId: portfolio_asset_id,
-      quantity: qty,
-      purchasePrice: price,
-    });
-
-    res.status(201).json({
-      message: "POSITION_RECORDED_SUCCESSFULLY",
-      data: { positionId },
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const getActivePortfolio = async (req, res, next) => {
-  try {
-    const userId = req.params.id;
-
-    const portfolio = await Portfolio.getActivePortfolio(userId);
-
-    res.status(200).json({ data: portfolio });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const getPortfolioAssets = async (req, res, next) => {
-  try {
-    const portfolioId = req.params.id;
-
-    const [assets] = await Portfolio.getPortfolioAssets(portfolioId);
-
-    res.status(200).json({ data: assets });
   } catch (err) {
     next(err);
   }

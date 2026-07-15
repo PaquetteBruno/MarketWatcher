@@ -9,7 +9,7 @@ class User {
 
     // Every user needs a portfolio to start with.
     const portfolioSql =
-      "INSERT INTO portfolio (user_id, name, selected) VALUES (?, 'Default', 1)";
+      "INSERT INTO portfolio (userId, name, selected) VALUES (?, 'Default', 1)";
     await db.query(portfolioSql, [userId]);
 
     return userId;
@@ -43,9 +43,9 @@ class User {
     return rows[0] || null;
   }
 
-  static async getPortfolios(user_id) {
-    const sql = `SELECT * from portfolio where user_id = ?`;
-    const [rows] = await db.query(sql, [user_id]);
+  static async getPortfolios(userId) {
+    const sql = `SELECT * from portfolio where userId = ?`;
+    const [rows] = await db.query(sql, [userId]);
     return rows || [];
   }
 }

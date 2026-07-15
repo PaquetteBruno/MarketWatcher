@@ -2,7 +2,7 @@ import db from "../config/db.js";
 
 class Position {
   static async create({ portfolioAssetId, quantity, purchasePrice }) {
-    const sql = `INSERT INTO position (portfolio_asset_id, quantity, purchase_price) 
+    const sql = `INSERT INTO position (portfolioAssetId, quantity, purchase_price) 
                      VALUES (?, ?, ?)`;
     const [result] = await db.query(sql, [
       portfolioAssetId,
@@ -15,7 +15,7 @@ class Position {
   static async getByPortfolioAssetId(portfolioAssetId) {
     const sql = `SELECT id, quantity, purchase_price, created_at 
                      FROM position
-                     WHERE portfolio_asset_id = ?
+                     WHERE portfolioAssetId = ?
                      ORDER BY created_at DESC`;
     const [rows] = await db.query(sql, [portfolioAssetId]);
     return rows.length > 0 ? rows : null;

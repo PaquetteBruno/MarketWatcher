@@ -6,40 +6,68 @@ const yahooFinance = new YahooFinanceClass({
 });
 
 class Portfolio {
-  // READ: Find the core portfolio ID belonging to a specific user_id
-  static async findIdByUserId(userId) {
-    const sql = `SELECT id, name FROM portfolio WHERE user_id = ? AND selected = 1`;
+  static async getPortfolio(portfolioId) {
+    const sql = `SELECT * FROM portfolio WHERE id = ?`;
+    const [rows] = await db.query(sql, [portfolioId]);
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  static async getPortfolios(userId) {
+    const sql = `SELECT * FROM portfolio WHERE userId = ?`;
     const [rows] = await db.query(sql, [userId]);
     return rows.length > 0 ? rows[0].id : null;
   }
 
-  // CREATE: Fallback provisioner to generate a default portfolio profile container
-  static async createDefault(userId) {
-    const sql = `INSERT INTO portfolio (user_id, name, selected) VALUES (?, 'Default', 1)`;
-    const [result] = await db.query(sql, [userId]);
+  static async getSelectedPortfolio(userId) {
+    const sql = `SELECT * FROM portfolio WHERE userId = ? and selected = 1`;
+    const [rows] = await db.query(sql, [userId]);
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  static async createPortfolio(userId, name, isSelected) {
+    const sql = `INSERT INTO portfolio (userId, name, selected) VALUES (?, ?, ?)`;
+    const [result] = await db.query(sql, [userId], [name], [isSelected]);
     return result.insertId;
   }
 
-  static async findLink(portfolioId, assetId) {
-    const sql = `SELECT id, name FROM portfolio_asset 
-                     WHERE portfolio_id = ? AND asset_id = ? 
-                     LIMIT 1`;
-    const [rows] = await db.query(sql, [portfolioId, assetId]);
-    return rows.length > 0 ? rows[0].id : null;
+  static async updatePortfolio(portfolioId, name, isSelected) {
+    // if the portfolio we save has isSelected = 1, we look for another selected portfolio with selected = 1, set it to 0
+    if (isSelected) {
+      let sql = `select p1.id 
+               from portfolio p1
+               join portfolio p2 on p1.userId = p2.userId
+              where p2.id = ?
+                and p2.id <> p1.id
+                and p1.selected = 1;`;
+
+      const [rows] = await db.query(sql, [portfolioId]);
+
+      if (rows.length > 0) {
+        sql = `update portfolio set selected = 0 where id = ?`;
+        await db.query(sql, rows[0].id);
+      }
+    }
+
+    const updateSql = `update portfolio set name = ?, selected = ? where id = ?`;
+    const [result] = await db.query(updateSql, [portfolioId]);
+
+    return result.length > 0 ? result[0] : null;
   }
 
-  static async getActivePortfolio(userId) {
-    const sql = `SELECT id, name from portfolio where user_id = ? AND selected = 1`;
-    const [rows] = await db.query(sql, [userId]);
-    return rows.length > 0 ? rows[0] : null;
+  static async deletePortfolio(portfolioId) {
+    const sql = `DELETE FROM portfolio where id = ?`;
+
+    const [result] = await db.query(sql, [portfolioId]);
+
+    return result.length > 0 ? result[0] : null;
   }
 
   static async getPortfolioAssets(portfolioId) {
     const sql = `
             SELECT asset.id, asset.symbol, asset.name, asset.type, asset.price, asset.price_change 
             FROM asset
-            JOIN portfolio_asset ON portfolio_asset.asset_id = asset.id
-            WHERE portfolio_asset.portfolio_id = ?
+            JOIN portfolio_asset ON portfolio_asset.assetId = asset.id
+            WHERE portfolio_asset.portfolioId = ?
         `;
 
     const [rows] = await db.query(sql, [portfolioId]);
@@ -50,6 +78,30 @@ class Portfolio {
       return await db.query(sql, [portfolioId]); // ReFetch the list with fresh data.
     }
     return rows;
+  }
+
+  static async createPortfolioAsset(portfolioId, assetId) {
+    const sql = `INSERT IGNORE INTO portfolio_asset (portfolioId, assetId) VALUES (?, ?)`;
+    const [result] = await db.query(sql, [portfolioId, assetId]);
+    return result.insertId;
+  }
+
+  static async deletePortfolioAsset(portfolioId, symbol) {
+    const sql = `DELETE pa 
+                   FROM portfolio_asset pa
+                   JOIN asset on asset.id = pa.assetId
+                  WHERE pa.portfolioId = ? 
+                    AND asset.symbol = ?`;
+
+    const [result] = await db.query(sql, [portfolioId, symbol]);
+
+    return result.length > 0 ? result[0] : null;
+  }
+
+  static async getActivePortfolio(userId) {
+    const sql = `SELECT id, name from portfolio where userId = ? AND selected = 1`;
+    const [rows] = await db.query(sql, [userId]);
+    return rows.length > 0 ? rows[0] : null;
   }
 
   static async updatePortfolioAssets(assets) {
@@ -83,43 +135,6 @@ class Portfolio {
         `[${new Date().toLocaleTimeString()}] Global marquee indices synchronized.`,
       );
     }
-  }
-
-  static async addAssetToPortfolio(portfolioId, assetId) {
-    const sql = `INSERT IGNORE INTO portfolio_asset (portfolio_id, asset_id) VALUES (?, ?)`;
-    const [result] = await db.query(sql, [portfolioId, assetId]);
-    return result.insertId;
-  }
-
-  static async removeAssetFromPortfolio(portfolio_id, symbol) {
-    const sql = `DELETE pa 
-                   FROM portfolio_asset pa
-                   JOIN asset on asset.id = pa.asset_id
-                  WHERE pa.portfolio_id = ? 
-                    AND asset.symbol = ?`;
-
-    const [result] = await db.query(sql, [portfolio_id, symbol]);
-
-    return result.length > 0 ? result[0] : null;
-  }
-
-  static async updateSelectedPortfolio(portfolio_id) {
-    let sql = `select p1.id 
-                   from portfolio p1
-                   join portfolio p2 on p1.user_id = p2.user_id
-                  where p2.id = ?
-                    and p1.selected = 1;`;
-    const [rows] = await db.query(sql, [portfolio_id]);
-
-    if (rows.length > 0) {
-      sql = `update portfolio set selected = 0 where id = ?`;
-      await db.query(sql, rows[0].id);
-    }
-
-    sql = `update portfolio set selected = 1 where id = ?`;
-    const [result] = await db.query(sql, [portfolio_id]);
-
-    return result.length > 0 ? result[0] : null;
   }
 }
 

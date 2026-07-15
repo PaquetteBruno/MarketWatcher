@@ -48,10 +48,10 @@ function App() {
     i18n.changeLanguage(lng);
   };
 
-  const handlePortfolioChange = async (portfolio_id) => {
-    portfolioService.updateSelected(portfolio_id, auth.token);
-    portfolio.setActivePortfolio(portfolio_id);
-    portfolio.loadAssets(auth.token, portfolio_id);
+  const handlePortfolioChange = async (portfolioId) => {
+    portfolioService.updateSelected(portfolioId, auth.token);
+    portfolio.setActivePortfolio(portfolioId);
+    portfolio.loadAssets(auth.token, portfolioId);
   };
 
   const handleNewPortfolio = async () => {

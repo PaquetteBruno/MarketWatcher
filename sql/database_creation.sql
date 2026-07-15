@@ -29,32 +29,32 @@ create table if not exists asset (
 -- 3. Changed 'portfolios' to 'portfolio'
 create table if not exists portfolio (
     id int auto_increment primary key,
-    user_id int not null, -- Keeps clear reference to 'user' table
+    userId int not null, -- Keeps clear reference to 'user' table
     name varchar(200) not null,
     selected bool not null default 0,
     created_at timestamp default current_timestamp,
     updated_at timestamp default current_timestamp on update current_timestamp,
-    foreign key (user_id) references user (id) on delete cascade
+    foreign key (userId) references user (id) on delete cascade
 );
 
 -- 4. Changed 'portfolio_asset' (already singular, which fits a junction table)
 create table if not exists portfolio_asset (
 	id int auto_increment primary key,
-    portfolio_id int not null,
-    asset_id int not null,
-	foreign key (portfolio_id) references portfolio (id) on delete cascade,
-    foreign key (asset_id) references asset (id) on delete cascade,
-    unique key unique_portfolio_asset (portfolio_id, asset_id) 
+    portfolioId int not null,
+    assetId int not null,
+	foreign key (portfolioId) references portfolio (id) on delete cascade,
+    foreign key (assetId) references asset (id) on delete cascade,
+    unique key unique_portfolio_asset (portfolioId, assetId) 
 );
 
 -- 5. Changed 'positions' to 'position'
 create table if not exists position (
 	id int auto_increment primary key,
-    portfolio_asset_id int not null,
+    portfolioAssetId int not null,
     quantity decimal (36, 18) not null default 0,
     purchase_price decimal (10, 2) not null default 0.00, 
     created_at timestamp default current_timestamp,
-    foreign key (portfolio_asset_id) references portfolio_asset (id) on delete cascade
+    foreign key (portfolioAssetId) references portfolio_asset (id) on delete cascade
 );
 
 -- 6. Changed 'query_log' (already singular)

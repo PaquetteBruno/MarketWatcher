@@ -1,11 +1,11 @@
 const portfolioService = {
-  async updateSelected(portfolio_id) {
+  async updateSelected(portfolioId) {
     const endpoint = `http://localhost:5000/api/portfolio/update-selected`;
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        portfolio_id: portfolio_id,
+        portfolioId: portfolioId,
       }),
     });
 
@@ -13,8 +13,8 @@ const portfolioService = {
     return json.data || [];
   },
 
-  async getActivePortfolio(token, user_id) {
-    const endpoint = `http://localhost:5000/api/portfolio/active/${user_id}`;
+  async getSelectedPortfolio(token, userId) {
+    const endpoint = `http://localhost:5000/api/portfolio/selected/${userId}`;
     const response = await fetch(endpoint, {
       method: "GET",
       headers: {
@@ -24,11 +24,11 @@ const portfolioService = {
     });
 
     const json = await response.json();
-    return json.data || [];
+    return json.data.id || [];
   },
 
-  async getPortfolioAssets(token, portfolio_id) {
-    const endpoint = `http://localhost:5000/api/portfolio/${portfolio_id}`;
+  async getPortfolioAssets(token, portfolioId) {
+    const endpoint = `http://localhost:5000/api/portfolio/${portfolioId}/assets`;
     const response = await fetch(endpoint, {
       method: "GET",
       headers: {
@@ -42,33 +42,39 @@ const portfolioService = {
   },
 
   async addPortfolioAsset(
-    portfolio_id,
+    portfolioId,
     symbol,
     name,
     type,
     price,
     price_change,
   ) {
-    await fetch("http://localhost:5000/api/portfolio/add-asset", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        portfolio_id: portfolio_id,
-        symbol: symbol,
-        name: name,
-        type: type,
-        price: price,
-        price_change: price_change,
-      }),
-    });
+    await fetch(
+      `http://localhost:5000/api/portfolio/${portfolioId}/assets/${symbol}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          portfolioId: portfolioId,
+          symbol: symbol,
+          name: name,
+          type: type,
+          price: price,
+          price_change: price_change,
+        }),
+      },
+    );
   },
 
-  async deletePortfolioAsset(portfolio_id, symbol) {
-    await fetch("http://localhost:5000/api/portfolio/remove-asset", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ portfolio_id: portfolio_id, symbol: symbol }),
-    });
+  async deletePortfolioAsset(portfolioId, symbol) {
+    await fetch(
+      `http://localhost:5000/api/portfolio/${portfolioId}/assets/${symbol}`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portfolioId: portfolioId, symbol: symbol }),
+      },
+    );
   },
 };
 
