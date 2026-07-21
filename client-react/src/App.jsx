@@ -34,6 +34,7 @@ function App() {
     auth.user?.id,
     global.loadGlobalData,
     portfolio.loadActivePortfolio,
+    portfolio.loadPortfolios,
     portfolio.loadAssets,
   );
 
@@ -48,14 +49,10 @@ function App() {
     i18n.changeLanguage(lng);
   };
 
-  const handlePortfolioChange = async (portfolioId) => {
-    portfolioService.updateSelected(portfolioId, auth.token);
+  const handlePortfolioChange = async (portfolioId, name, isSelected) => {
+    portfolioService.updatePortfolio(auth.token, portfolioId, name, isSelected);
     portfolio.setActivePortfolio(portfolioId);
     portfolio.loadAssets(auth.token, portfolioId);
-  };
-
-  const handleNewPortfolio = async () => {
-    window.alert(t("COMING_SOON"));
   };
 
   const handleInputChange = async (text) => {
@@ -85,10 +82,6 @@ function App() {
         asset.price_change,
       );
 
-      search.setSearchMessage(
-        `[${asset.symbol}] ${asset.name} ${t("WAS_ADDED_SUCCESSFULLY")}`,
-      );
-
       portfolio.loadAssets(auth.token, portfolio.activePortfolio);
     } catch (error) {
       search.setSearchMessage(`${t("ERROR_ADDING_ASSET")} ${error.message}`);
@@ -96,7 +89,6 @@ function App() {
   };
 
   const removeAssetFromPortfolio = async (symbol) => {
-    if (!window.confirm(`Remove ${symbol}?`)) return;
     try {
       await portfolioService.deletePortfolioAsset(
         portfolio.activePortfolio,
@@ -171,9 +163,8 @@ function App() {
             </div>
             <Portfolios
               auth={auth}
+              portfolio={portfolio}
               handlePortfolioChange={handlePortfolioChange}
-              handleNewPortfolio={handleNewPortfolio}
-              activePortfolio={portfolio.activePortfolio}
             />
             <AssetList
               portfolioAssets={portfolio.portfolioAssets}

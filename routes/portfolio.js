@@ -16,20 +16,20 @@ const router = express.Router();
 // get a single portfolio by id
 router.get("/:id", getPortfolio);
 
+// get all portfolios from current user
+router.get("/", getPortfolios);
+
 // get the selected portfolio
 router.get("/selected/:id", getSelectedPortfolio);
 
-// get all portfolios from current user
-router.get("", getPortfolios);
-
 // create a new portfolio for the current user
-router.post("", createPortfolio);
+router.post("/", createPortfolio);
 
-// rename a portfolio by id
-router.patch("/:id", updatePortfolio);
+// update a portfolio
+router.post("/:id", updatePortfolio);
 
 // delete a portfolio by id
-router.delete("/:id", deletePortfolio);
+router.delete("/", deletePortfolio);
 
 // get all assets for a portfolio
 router.get("/:portfolioId/assets", getPortfolioAssets);

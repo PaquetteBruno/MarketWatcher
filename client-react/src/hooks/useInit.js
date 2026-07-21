@@ -5,6 +5,7 @@ export default function useInit(
   userId,
   loadGlobalData,
   loadActivePortfolio,
+  loadPortfolios,
   loadAssets,
 ) {
   const load = useCallback(async () => {
@@ -13,9 +14,15 @@ export default function useInit(
     const portfolioId = await loadActivePortfolio(token, userId);
 
     await loadAssets(token, portfolioId);
-
-    console.log("Loading application...");
-  }, [token, userId, loadGlobalData, loadActivePortfolio, loadAssets]);
+    await loadPortfolios(token, userId);
+  }, [
+    token,
+    userId,
+    loadGlobalData,
+    loadActivePortfolio,
+    loadPortfolios,
+    loadAssets,
+  ]);
 
   return load;
 }

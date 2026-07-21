@@ -1,16 +1,50 @@
 const portfolioService = {
-  async updateSelected(portfolioId) {
-    const endpoint = `http://localhost:5000/api/portfolio/update-selected`;
+  async createPortfolio(token, userId, name) {
+    const endpoint = `http://localhost:5000/api/portfolio/`;
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: userId,
+        name: name,
+      }),
+    });
+    return response.json();
+  },
+
+  async updatePortfolio(token, portfolioId, name, isSelected) {
+    const endpoint = `http://localhost:5000/api/portfolio/${portfolioId}`;
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: name,
+        isSelected: isSelected,
+      }),
+    });
+    return response.json();
+  },
+
+  async deletePortfolio(token, portfolioId) {
+    const endpoint = `http://localhost:5000/api/portfolio/`;
+    const response = await fetch(endpoint, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         portfolioId: portfolioId,
       }),
     });
-
-    const json = await response.json();
-    return json.data || [];
+    return response.json();
   },
 
   async getSelectedPortfolio(token, userId) {
@@ -24,7 +58,21 @@ const portfolioService = {
     });
 
     const json = await response.json();
-    return json.data.id || [];
+    return json.data?.id || 0;
+  },
+
+  async getPortfolios(token, userId) {
+    const endpoint = `http://localhost:5000/api/portfolio/?userId=${userId}`;
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const json = await response.json();
+    return json.data || [];
   },
 
   async getPortfolioAssets(token, portfolioId) {

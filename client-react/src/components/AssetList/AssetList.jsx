@@ -1,16 +1,38 @@
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
+import ConfirmModal from "../ConfirmModal";
 
 function AssetList({ portfolioAssets, removeAssetFromPortfolio }) {
   const { t } = useTranslation();
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedSymbol, setSelectedSymbol] = useState("");
+
+  const handleTrashClick = (symbol) => {
+    setSelectedSymbol(symbol);
+    setModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    removeAssetFromPortfolio(selectedSymbol);
+    setModalOpen(false);
+    setSelectedSymbol("");
+  };
+
+  // 6. Triggered when the user clicks "Cancel" inside the modal
+  const handleCancelDelete = () => {
+    setModalOpen(false); // Close the modal
+    setSelectedSymbol(""); // Reset state
+  };
 
   return (
     <div
       style={{
         background: "#161b22",
-        border: "1px solid #21262d",
-        borderRadius: "10px",
-        padding: "10px 20px",
-        marginBottom: "40px",
+        border: "0px solid #21262d",
+        borderRadius: "1px",
+        padding: "0px 00px",
+        marginBottom: "20px",
         overflowX: "auto",
       }}
     >
@@ -26,9 +48,9 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio }) {
           <thead>
             <tr
               style={{
-                borderBottom: "1px solid #30363d",
+                //borderBottom: "1px solid #30363d",
                 fontSize: "13px",
-                color: "#86acd7",
+                color: "#c1bebe",
               }}
             >
               <th style={{ padding: "12px 12px", width: "15%" }}>
@@ -56,9 +78,9 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio }) {
                   textAlign: "right",
                 }}
               >
-                24h {t("CHANGE")}
+                24h %
               </th>
-              <th style={{ padding: "12px 12px", width: "5%" }}></th>
+              <th style={{ padding: "1px 1px", width: "5%" }}></th>
             </tr>
           </thead>
           <tbody>
@@ -70,7 +92,8 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio }) {
                 <tr
                   key={asset.symbol}
                   style={{
-                    borderBottom: "1px solid #21262d",
+                    borderTop: "0.5px solid #21262d",
+                    borderBottom: "0.5px solid #21262d",
                     fontSize: "14px",
                     background: rBg,
                     transition: "background 0.2s",
@@ -150,7 +173,7 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio }) {
                     }}
                   >
                     <button
-                      onClick={() => removeAssetFromPortfolio(asset.symbol)}
+                      onClick={() => handleTrashClick(asset.symbol)}
                       style={{
                         background: "transparent",
                         color: "#8b949e",
@@ -179,6 +202,12 @@ function AssetList({ portfolioAssets, removeAssetFromPortfolio }) {
           {t("EMPTY_LIST")}
         </div>
       )}
+      <ConfirmModal
+        isOpen={modalOpen}
+        message={`${t("REMOVE")} ${selectedSymbol} ${t("FROM_THIS_PORTFOLIO")} ?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 }

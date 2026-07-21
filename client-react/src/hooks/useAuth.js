@@ -11,39 +11,42 @@ export function useAuth() {
     return localStorage.getItem("mw_token");
   });
 
-  const [portfolio, setPortfolio] = useState(() => {
-    return JSON.parse(localStorage.getItem("mw_portfolio"));
-  });
-
   const completeLogin = useCallback((userData, tokenData) => {
     setUser(userData);
     setToken(tokenData);
-    setPortfolio(userData.portfolios.find((c) => c.selected === 1));
 
     localStorage.setItem("mw_user", JSON.stringify(userData));
     localStorage.setItem("mw_token", tokenData);
-    localStorage.setItem(
-      "mw_portfolio",
-      JSON.stringify(userData.portfolios.find((c) => c.selected === 1)),
-    );
   }, []);
+
+  const updatePortfolios = useCallback(
+    (portfolios) => {
+      const updatedUser = {
+        ...user,
+        portfolios,
+      };
+
+      setUser(updatedUser);
+
+      localStorage.setItem("mw_user", JSON.stringify(updatedUser));
+    },
+    [user],
+  );
 
   const completeLogout = useCallback(() => {
     localStorage.removeItem("mw_token");
     localStorage.removeItem("mw_user");
-    localStorage.removeItem("mw_portfolio");
 
     setUser(null);
     setToken(null);
-    setPortfolio(null);
   }, []);
 
   return {
     user,
     token,
-    portfolio,
     completeLogin,
     completeLogout,
+    updatePortfolios,
   };
 }
 

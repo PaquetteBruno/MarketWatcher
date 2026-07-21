@@ -30,7 +30,7 @@ export const getSelectedPortfolio = async (req, res, next) => {
 // get all portfolios from current user
 export const getPortfolios = async (req, res, next) => {
   try {
-    const userId = req.params.id;
+    const { userId } = req.query;
 
     const portfolios = await Portfolio.getPortfolios(userId);
 
@@ -43,11 +43,23 @@ export const getPortfolios = async (req, res, next) => {
 // create a new portfolio for the current user
 export const createPortfolio = async (req, res, next) => {
   try {
-    const { userId, name, isSelected } = req.params;
+    const { userId, name } = req.body;
 
-    const result = await Portfolio.createPortfolio(userId, name, isSelected);
+    const result = await Portfolio.createPortfolio(userId, name);
 
-    req.status(200).json({ data: result });
+    res.status(200).json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deletePortfolio = async (req, res, next) => {
+  try {
+    const { portfolioId } = req.body;
+
+    const result = await Portfolio.deletePortfolio(portfolioId);
+
+    res.status(200).json({ data: result });
   } catch (err) {
     next(err);
   }
@@ -56,25 +68,14 @@ export const createPortfolio = async (req, res, next) => {
 // rename a portfolio by id
 export const updatePortfolio = async (req, res, next) => {
   try {
-    const { portfolioId, name, isSelected } = req.params;
+    const portfolioId = req.params.id;
+    const { name, isSelected } = req.body;
 
-    const result = await Portfolio.createPortfolio(
+    const result = await Portfolio.updatePortfolio(
       portfolioId,
       name,
       isSelected,
     );
-
-    req.status(200).json({ data: result });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// delete a portfolio by id
-export const deletePortfolio = async (req, res, next) => {
-  try {
-    const portfolioId = req.params.id;
-    const [result] = await Portfolio.deletePortfolio(portfolioId);
 
     res.status(200).json({ data: result });
   } catch (err) {

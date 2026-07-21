@@ -15,7 +15,7 @@ class Portfolio {
   static async getPortfolios(userId) {
     const sql = `SELECT * FROM portfolio WHERE userId = ?`;
     const [rows] = await db.query(sql, [userId]);
-    return rows.length > 0 ? rows[0].id : null;
+    return rows.length > 0 ? rows : null;
   }
 
   static async getSelectedPortfolio(userId) {
@@ -24,9 +24,13 @@ class Portfolio {
     return rows.length > 0 ? rows[0] : null;
   }
 
-  static async createPortfolio(userId, name, isSelected) {
-    const sql = `INSERT INTO portfolio (userId, name, selected) VALUES (?, ?, ?)`;
-    const [result] = await db.query(sql, [userId], [name], [isSelected]);
+  static async createPortfolio(userId, name) {
+    // Creating a new portfolio will always be the new selected one, so we put 1.
+    let sql = `UPDATE portfolio set selected = 0 where userId = ?`;
+    await db.query(sql, [userId]);
+
+    sql = `INSERT INTO portfolio (userId, name, selected) VALUES (?, ?, 1)`;
+    const [result] = await db.query(sql, [userId, name]);
     return result.insertId;
   }
 
@@ -49,17 +53,32 @@ class Portfolio {
     }
 
     const updateSql = `update portfolio set name = ?, selected = ? where id = ?`;
-    const [result] = await db.query(updateSql, [portfolioId]);
+    const [result] = await db.query(updateSql, [name, isSelected, portfolioId]);
 
-    return result.length > 0 ? result[0] : null;
+    return result.affectedRows;
   }
 
   static async deletePortfolio(portfolioId) {
+    const portfolio = await this.getPortfolio(portfolioId);
+
+    // If we delete the selected one, we need to select another one, so we give it to the oldest one.
+    if (portfolio.selected) {
+      const updateSql = `UPDATE portfolio p
+                           JOIN (
+                              SELECT MIN(id) AS min_id 
+                                FROM portfolio 
+                               WHERE userId = ? AND id <> ?
+                          ) temp ON p.id = temp.min_id
+                          SET p.selected = 1`;
+
+      await db.query(updateSql, [portfolio.userId, portfolio.id]);
+    }
+
     const sql = `DELETE FROM portfolio where id = ?`;
 
     const [result] = await db.query(sql, [portfolioId]);
 
-    return result.length > 0 ? result[0] : null;
+    return result.affectedRows;
   }
 
   static async getPortfolioAssets(portfolioId) {
